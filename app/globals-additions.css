@@ -1,0 +1,100 @@
+/* Gift Card Manager management update */
+.used-row td {
+  background: #f3f3f1;
+  color: #858985;
+}
+.used-row code,
+.used-row strong,
+.used-row div {
+  color: #7b807b;
+}
+.used-row .status.used {
+  opacity: 1;
+}
+.used-row:hover td {
+  background: #eeeeeb;
+}
+.used-secret,
+.used-lock {
+  color: #9a9e9a;
+  font-size: 12px;
+}
+.import-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px;
+  margin: 20px 0 4px;
+  background: var(--soft);
+  border-radius: 12px;
+}
+.import-tabs button {
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.import-tabs button.active {
+  background: white;
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.file-drop {
+  margin-top: 18px;
+  border: 1px dashed #bfc3bf;
+  border-radius: 13px;
+  padding: 22px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+}
+.file-drop small {
+  max-width: 560px;
+  line-height: 1.5;
+}
+.file-button-large {
+  padding: 11px 15px;
+  cursor: pointer;
+}
+.import-summary {
+  margin-top: 14px;
+  border-radius: 10px;
+  background: var(--soft);
+  padding: 11px 13px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.import-summary span {
+  color: var(--muted);
+}
+.preview-header {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.preview > div {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 80px 120px;
+  gap: 12px;
+}
+@media (max-width: 650px) {
+  .import-summary {
+    flex-direction: column;
+  }
+  .preview > div {
+    grid-template-columns: 1fr;
+  }
+}
