@@ -6,6 +6,7 @@ import {
   Clipboard,
   Eye,
   EyeOff,
+  FileSpreadsheet,
   Gift,
   LogOut,
   Plus,
@@ -14,6 +15,9 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import * as XLSX from "xlsx";
+
+type Role = "admin" | "manager" | "viewer";
 
 type GiftCard = {
   id: string;
@@ -33,6 +37,9 @@ type GiftCard = {
 type ParsedCard = {
   code: string;
   pin: string;
+  value?: number;
+  currency?: string;
+  batch?: string;
 };
 
 const supabase = createClient();
@@ -50,15 +57,20 @@ export default function GiftCardDashboard({
   const [useCard, setUseCard] = useState<GiftCard | null>(null);
   const [visiblePins, setVisiblePins] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState("");
-  const [role, setRole] = useState<"admin" | "manager" | "viewer">("viewer");
+  const [role, setRole] = useState<Role>("viewer");
 
   async function loadCards() {
     setLoading(true);
-    const { data: profile } = await supabase
+    setMessage("");
+
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
-      .single();
-    if (profile?.role) setRole(profile.role);
+      .maybeSingle();
+
+    if (profileError) setMessage(profileError.message);
+    if (profile?.role) setRole(profile.role as Role);
+
     const { data, error } = await supabase
       .from("gift_cards")
       .select("*")
@@ -92,11 +104,10 @@ export default function GiftCardDashboard({
   const used = cards.filter((c) => c.status === "used").length;
 
   const valuesByCurrency = useMemo(() => {
-    const map: Record<string, { available: number; total: number }> = {};
+    const map: Record<string, number> = {};
     for (const c of cards) {
-      map[c.currency] ??= { available: 0, total: 0 };
-      map[c.currency].total += Number(c.value);
-      if (c.status === "available") map[c.currency].available += Number(c.value);
+      if (c.status !== "available") continue;
+      map[c.currency] = (map[c.currency] ?? 0) + Number(c.value);
     }
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
   }, [cards]);
@@ -107,7 +118,13 @@ export default function GiftCardDashboard({
   }
 
   async function restore(card: GiftCard) {
-    if (!window.confirm("Mark this gift card as available again?")) return;
+    if (role !== "admin") return;
+    if (
+      !window.confirm(
+        `Restore gift card ${card.code} to Available?\n\nThis action will be recorded in the audit log.`
+      )
+    ) return;
+
     const { error } = await supabase
       .from("gift_cards")
       .update({
@@ -118,6 +135,7 @@ export default function GiftCardDashboard({
         used_by: null,
       })
       .eq("id", card.id);
+
     if (error) return setMessage(error.message);
     await loadCards();
   }
@@ -155,7 +173,7 @@ export default function GiftCardDashboard({
         <article className="stat-card">
           <span>Used cards</span>
           <strong>{used}</strong>
-          <small>Recorded as issued</small>
+          <small>Already issued</small>
         </article>
         <article className="stat-card wide">
           <span>Available value</span>
@@ -163,17 +181,14 @@ export default function GiftCardDashboard({
             {valuesByCurrency.length === 0 ? (
               <strong>—</strong>
             ) : (
-              valuesByCurrency.map(([currency, amounts]) => (
+              valuesByCurrency.map(([currency, amount]) => (
                 <strong key={currency}>
-                  {amounts.available.toLocaleString(undefined, {
-                    maximumFractionDigits: 2,
-                  })}{" "}
-                  {currency}
+                  {amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} {currency}
                 </strong>
               ))
             )}
           </div>
-          <small>Never combine different currencies</small>
+          <small>Values are kept separate by currency</small>
         </article>
       </section>
 
@@ -186,6 +201,7 @@ export default function GiftCardDashboard({
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+
         <div className="segmented">
           {(["all", "available", "used"] as const).map((f) => (
             <button
@@ -197,6 +213,7 @@ export default function GiftCardDashboard({
             </button>
           ))}
         </div>
+
         {role !== "viewer" && (
           <button className="primary" onClick={() => setShowUpload(true)}>
             <Plus size={18} /> Add gift cards
@@ -213,7 +230,11 @@ export default function GiftCardDashboard({
           <div className="empty">
             <Gift size={30} />
             <strong>No gift cards found</strong>
-            <span>Add a batch or change the current filter.</span>
+            <span>
+              {role === "viewer"
+                ? "No cards are available in the current view."
+                : "Add a batch or change the current filter."}
+            </span>
           </div>
         ) : (
           <div className="table-wrap">
@@ -231,91 +252,100 @@ export default function GiftCardDashboard({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((card) => (
-                  <tr key={card.id}>
-                    <td>
-                      <span className={`status ${card.status}`}>
-                        {card.status === "available" ? "Available" : "Used"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="secret-row">
-                        <code>{card.code}</code>
-                        <button
-                          className="icon-btn"
-                          title="Copy code"
-                          onClick={() => copy(card.code)}
-                        >
-                          <Clipboard size={15} />
-                        </button>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="secret-row">
-                        <code>
-                          {visiblePins[card.id] ? card.pin : "••••"}
-                        </code>
-                        <button
-                          className="icon-btn"
-                          title="Show or hide PIN"
-                          onClick={() =>
-                            setVisiblePins((s) => ({
-                              ...s,
-                              [card.id]: !s[card.id],
-                            }))
-                          }
-                        >
-                          {visiblePins[card.id] ? (
-                            <EyeOff size={15} />
-                          ) : (
-                            <Eye size={15} />
+                {filtered.map((card) => {
+                  const isUsed = card.status === "used";
+                  return (
+                    <tr key={card.id} className={isUsed ? "used-row" : ""}>
+                      <td>
+                        <span className={`status ${card.status}`}>
+                          {isUsed ? "Used" : "Available"}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="secret-row">
+                          <code>{card.code}</code>
+                          {!isUsed && (
+                            <button
+                              className="icon-btn"
+                              title="Copy code"
+                              onClick={() => copy(card.code)}
+                            >
+                              <Clipboard size={15} />
+                            </button>
                           )}
-                        </button>
-                        {visiblePins[card.id] && (
-                          <button
-                            className="icon-btn"
-                            title="Copy PIN"
-                            onClick={() => copy(card.pin)}
-                          >
-                            <Clipboard size={15} />
-                          </button>
+                        </div>
+                      </td>
+                      <td>
+                        {isUsed ? (
+                          <code className="used-secret">••••</code>
+                        ) : (
+                          <div className="secret-row">
+                            <code>{visiblePins[card.id] ? card.pin : "••••"}</code>
+                            <button
+                              className="icon-btn"
+                              title="Show or hide PIN"
+                              onClick={() =>
+                                setVisiblePins((s) => ({
+                                  ...s,
+                                  [card.id]: !s[card.id],
+                                }))
+                              }
+                            >
+                              {visiblePins[card.id] ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                            {visiblePins[card.id] && (
+                              <button
+                                className="icon-btn"
+                                title="Copy PIN"
+                                onClick={() => copy(card.pin)}
+                              >
+                                <Clipboard size={15} />
+                              </button>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    </td>
-                    <td className="nowrap">
-                      {Number(card.value).toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      {card.currency}
-                    </td>
-                    <td>{card.batch_label || "—"}</td>
-                    <td>
-                      <div>{card.recipient || "—"}</div>
-                      {card.note && <small>{card.note}</small>}
-                    </td>
-                    <td className="nowrap">
-                      {card.used_at
-                        ? new Date(card.used_at).toLocaleDateString()
-                        : "—"}
-                    </td>
-                    <td className="actions">
-                      {role === "viewer" ? (
-                        <span className="user-email">Read only</span>
-                      ) : card.status === "available" ? (
-                        <button
-                          className="small-primary"
-                          onClick={() => setUseCard(card)}
-                        >
-                          <CheckCircle2 size={15} /> Mark used
-                        </button>
-                      ) : (
-                        <button className="link-btn" onClick={() => restore(card)}>
-                          Restore
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="nowrap">
+                        {Number(card.value).toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}{" "}
+                        {card.currency}
+                      </td>
+                      <td>{card.batch_label || "—"}</td>
+                      <td>
+                        <div>{card.recipient || "—"}</div>
+                        {card.note && <small>{card.note}</small>}
+                      </td>
+                      <td className="nowrap">
+                        {card.used_at
+                          ? new Date(card.used_at).toLocaleString(undefined, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })
+                          : "—"}
+                        {card.used_by && <small>{card.used_by}</small>}
+                      </td>
+                      <td className="actions">
+                        {role === "viewer" ? (
+                          <span className="user-email">Read only</span>
+                        ) : !isUsed ? (
+                          <button
+                            className="small-primary"
+                            onClick={() => setUseCard(card)}
+                          >
+                            <CheckCircle2 size={15} /> Mark used
+                          </button>
+                        ) : role === "admin" ? (
+                          <button className="link-btn" onClick={() => restore(card)}>
+                            Restore
+                          </button>
+                        ) : (
+                          <span className="used-lock">Used</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -355,45 +385,90 @@ function UploadModal({
   onSaved: () => void;
 }) {
   const [raw, setRaw] = useState("");
+  const [fileCards, setFileCards] = useState<ParsedCard[]>([]);
+  const [fileName, setFileName] = useState("");
   const [value, setValue] = useState("750");
   const [currency, setCurrency] = useState("CHF");
   const [batch, setBatch] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState<"paste" | "file">("paste");
 
-  const parsed = useMemo(() => parseGiftCards(raw), [raw]);
+  const pastedCards = useMemo(() => parseGiftCards(raw), [raw]);
+  const parsed = mode === "paste" ? pastedCards : fileCards;
 
-  function importFile(file?: File) {
+  async function importFile(file?: File) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setRaw(String(reader.result ?? ""));
-    reader.readAsText(file);
+    setError("");
+    setFileName(file.name);
+
+    try {
+      const lower = file.name.toLowerCase();
+
+      if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer);
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+          defval: "",
+          raw: false,
+        });
+        const cards = parseStructuredRows(rows);
+        setFileCards(cards);
+        if (!cards.length) {
+          setError("No valid rows found. Use columns named code and pin.");
+        }
+        return;
+      }
+
+      const text = await file.text();
+      const structured = parseCsvOrDelimited(text);
+      setFileCards(structured.length ? structured : parseGiftCards(text));
+      if (!(structured.length || parseGiftCards(text).length)) {
+        setError("No valid code / PIN pairs found in the file.");
+      }
+    } catch {
+      setFileCards([]);
+      setError("The file could not be read. Please use CSV, XLSX, XLS or TXT.");
+    }
   }
 
   async function save() {
     setError("");
-    if (!parsed.length) return setError("No valid code / PIN pairs found.");
-    if (!value || Number(value) <= 0) return setError("Enter a valid value.");
-    if (!/^[A-Za-z]{3}$/.test(currency))
+    if (!parsed.length) return setError("No valid gift cards detected.");
+
+    const defaultValue = Number(value);
+    if ((!defaultValue || defaultValue <= 0) && parsed.some((c) => !c.value)) {
+      return setError("Enter a valid default value per card.");
+    }
+
+    if (!/^[A-Za-z]{3}$/.test(currency) && parsed.some((c) => !c.currency)) {
       return setError("Currency must be a 3-letter code such as CHF, EUR or GBP.");
+    }
 
-    setSaving(true);
-
-    const rows = parsed.map((card) => ({
-      code: card.code,
-      pin: card.pin,
-      value: Number(value),
-      currency: currency.toUpperCase(),
-      batch_label: batch.trim() || null,
-      status: "available",
+    const normalizedRows = parsed.map((card) => ({
+      code: card.code.trim(),
+      pin: card.pin.trim(),
+      value: Number(card.value ?? defaultValue),
+      currency: String(card.currency ?? currency).toUpperCase().trim(),
+      batch_label: (card.batch ?? batch).trim() || null,
+      status: "available" as const,
     }));
 
-    const { error } = await supabase.from("gift_cards").insert(rows);
+    if (normalizedRows.some((r) => !r.value || r.value <= 0)) {
+      return setError("Every card requires a value greater than zero.");
+    }
+    if (normalizedRows.some((r) => !/^[A-Z]{3}$/.test(r.currency))) {
+      return setError("Every card requires a valid 3-letter currency.");
+    }
 
+    setSaving(true);
+    const { error } = await supabase.from("gift_cards").insert(normalizedRows);
     setSaving(false);
+
     if (error) {
       if (error.code === "23505") {
-        setError("At least one gift card code already exists.");
+        setError("At least one gift card code already exists. Nothing was imported.");
       } else {
         setError(error.message);
       }
@@ -406,17 +481,35 @@ function UploadModal({
   return (
     <div className="modal-backdrop">
       <section className="modal large-modal">
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose}>
+          <X size={20} />
+        </button>
+
         <p className="eyebrow">NEW BATCH</p>
         <h2>Add gift cards</h2>
         <p className="muted">
-          Paste the lines you receive from the gift card request, or upload a
-          TXT/CSV file. Each row must contain a code followed by its PIN.
+          Paste code and PIN pairs directly, or upload CSV / Excel. You can set
+          one value and currency for the whole batch or provide them as file columns.
         </p>
+
+        <div className="import-tabs">
+          <button
+            className={mode === "paste" ? "active" : ""}
+            onClick={() => setMode("paste")}
+          >
+            <Clipboard size={16} /> Paste codes
+          </button>
+          <button
+            className={mode === "file" ? "active" : ""}
+            onClick={() => setMode("file")}
+          >
+            <FileSpreadsheet size={16} /> CSV / Excel
+          </button>
+        </div>
 
         <div className="two-col">
           <label>
-            Value per card
+            Default value per card
             <input
               type="number"
               min="0"
@@ -426,7 +519,7 @@ function UploadModal({
             />
           </label>
           <label>
-            Currency
+            Default currency
             <input
               maxLength={3}
               value={currency}
@@ -441,46 +534,67 @@ function UploadModal({
           <input
             value={batch}
             onChange={(e) => setBatch(e.target.value)}
-            placeholder="e.g. Aug 2026 · Gift Card Management suppliers"
+            placeholder="e.g. Supplier gifts · August 2026"
           />
         </label>
 
-        <label>
-          Codes and PINs
-          <textarea
-            rows={8}
-            value={raw}
-            onChange={(e) => setRaw(e.target.value)}
-            placeholder={"638889001467108225188    2717\n638889001595108225194    2412"}
-          />
-        </label>
-
-        <div className="upload-line">
-          <label className="file-button">
-            <Upload size={16} /> Upload TXT / CSV
-            <input
-              hidden
-              type="file"
-              accept=".txt,.csv,text/plain,text/csv"
-              onChange={(e) => importFile(e.target.files?.[0])}
+        {mode === "paste" ? (
+          <label>
+            Codes and PINs
+            <textarea
+              rows={9}
+              value={raw}
+              onChange={(e) => setRaw(e.target.value)}
+              placeholder={
+                "638889001467108225188    2717\n638889001595108225194    2412\n638889001452108225205    2895"
+              }
             />
           </label>
-          <span>
-            {parsed.length
-              ? `${parsed.length} valid card${parsed.length === 1 ? "" : "s"} detected`
-              : "No cards detected yet"}
-          </span>
+        ) : (
+          <div className="file-drop">
+            <label className="file-button file-button-large">
+              <Upload size={18} /> Choose CSV / Excel file
+              <input
+                hidden
+                type="file"
+                accept=".csv,.txt,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                onChange={(e) => importFile(e.target.files?.[0])}
+              />
+            </label>
+            <span>{fileName || "No file selected"}</span>
+            <small>
+              Recommended columns: <code>code</code>, <code>pin</code>, <code>value</code>,{" "}
+              <code>currency</code>, <code>batch</code>. Only code and pin are required.
+            </small>
+          </div>
+        )}
+
+        <div className="import-summary">
+          <strong>
+            {parsed.length} valid card{parsed.length === 1 ? "" : "s"} detected
+          </strong>
+          {parsed.length > 0 && (
+            <span>
+              {parsed.every((p) => p.value && p.currency)
+                ? "Using values and currencies from the file where provided."
+                : `Default: ${value || "—"} ${currency || "—"} per card`}
+            </span>
+          )}
         </div>
 
         {parsed.length > 0 && (
           <div className="preview">
-            {parsed.slice(0, 5).map((p) => (
+            <div className="preview-header">
+              <span>Code</span><span>PIN</span><span>Value</span>
+            </div>
+            {parsed.slice(0, 6).map((p) => (
               <div key={p.code}>
                 <code>{p.code}</code>
-                <span>PIN {p.pin}</span>
+                <span>{p.pin}</span>
+                <span>{p.value ?? value} {p.currency ?? currency}</span>
               </div>
             ))}
-            {parsed.length > 5 && <small>+ {parsed.length - 5} more</small>}
+            {parsed.length > 6 && <small>+ {parsed.length - 6} more</small>}
           </div>
         )}
 
@@ -488,8 +602,8 @@ function UploadModal({
 
         <div className="modal-actions">
           <button className="ghost" onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={save} disabled={saving}>
-            {saving ? "Saving…" : `Add ${parsed.length || ""} gift cards`}
+          <button className="primary" onClick={save} disabled={saving || !parsed.length}>
+            {saving ? "Importing…" : `Import ${parsed.length || ""} gift cards`}
           </button>
         </div>
       </section>
@@ -514,7 +628,15 @@ function UseModal({
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    if (!recipient.trim()) return setError("Please enter the recipient or vendor.");
+    if (!recipient.trim()) {
+      return setError("Please enter the recipient or vendor.");
+    }
+
+    if (
+      !window.confirm(
+        `Mark this ${card.value} ${card.currency} gift card as used for ${recipient.trim()}?\n\nIt will be removed from the available balance.`
+      )
+    ) return;
 
     setSaving(true);
     const { error } = await supabase
@@ -537,9 +659,14 @@ function UseModal({
   return (
     <div className="modal-backdrop">
       <section className="modal">
-        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <button className="modal-close" onClick={onClose}>
+          <X size={20} />
+        </button>
         <p className="eyebrow">ISSUE GIFT CARD</p>
         <h2>Mark as used</h2>
+        <p className="muted">
+          Used cards are greyed out and excluded from the available balance.
+        </p>
 
         <div className="card-summary">
           <div><span>Code</span><code>{card.code}</code></div>
@@ -587,8 +714,9 @@ function parseGiftCards(input: string): ParsedCard[] {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    // Supports tab, spaces, comma or semicolon between code and PIN.
-    const match = trimmed.match(/^["']?(\d{8,})["']?[\s,;]+["']?(\d{3,8})["']?/);
+    const match = trimmed.match(
+      /^["']?([A-Za-z0-9_-]{8,})["']?[\s,;]+["']?([A-Za-z0-9_-]{3,12})["']?/
+    );
     if (!match) continue;
 
     const code = match[1];
@@ -599,4 +727,71 @@ function parseGiftCards(input: string): ParsedCard[] {
   }
 
   return rows;
+}
+
+function normalizeKey(key: string) {
+  return key.toLowerCase().trim().replace(/[\s_-]+/g, "");
+}
+
+function parseStructuredRows(rows: Record<string, unknown>[]): ParsedCard[] {
+  const seen = new Set<string>();
+  const output: ParsedCard[] = [];
+
+  for (const row of rows) {
+    const normalized: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(row)) {
+      normalized[normalizeKey(key)] = val;
+    }
+
+    const code = String(
+      normalized.code ?? normalized.giftcardcode ?? normalized.cardcode ?? ""
+    ).trim();
+    const pin = String(
+      normalized.pin ?? normalized.pincode ?? normalized.giftcardpin ?? ""
+    ).trim();
+
+    if (!code || !pin || seen.has(code)) continue;
+
+    const rawValue = normalized.value ?? normalized.amount ?? normalized.cardvalue;
+    const numericValue =
+      rawValue === undefined || rawValue === ""
+        ? undefined
+        : Number(String(rawValue).replace(/[^\d.,-]/g, "").replace(",", "."));
+
+    const rawCurrency = String(
+      normalized.currency ?? normalized.curr ?? ""
+    ).trim().toUpperCase();
+
+    const rawBatch = String(
+      normalized.batch ?? normalized.batchlabel ?? normalized.description ?? ""
+    ).trim();
+
+    seen.add(code);
+    output.push({
+      code,
+      pin,
+      value: numericValue && numericValue > 0 ? numericValue : undefined,
+      currency: /^[A-Z]{3}$/.test(rawCurrency) ? rawCurrency : undefined,
+      batch: rawBatch || undefined,
+    });
+  }
+
+  return output;
+}
+
+function parseCsvOrDelimited(input: string): ParsedCard[] {
+  const lines = input.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+
+  const delimiter =
+    lines[0].includes("\t") ? "\t" :
+    lines[0].includes(";") ? ";" : ",";
+
+  const headers = lines[0].split(delimiter).map((h) => h.replace(/^["']|["']$/g, "").trim());
+  const rows = lines.slice(1).map((line) => {
+    const cells = line.split(delimiter).map((c) => c.replace(/^["']|["']$/g, "").trim());
+    return Object.fromEntries(headers.map((h, i) => [h, cells[i] ?? ""]));
+  });
+
+  return parseStructuredRows(rows);
 }
