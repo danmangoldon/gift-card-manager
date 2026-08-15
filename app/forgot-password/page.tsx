@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MailKey } from "lucide-react";
+import { Mail } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const supabase = createClient();
@@ -21,25 +21,31 @@ export default function ForgotPasswordPage() {
     });
 
     setLoading(false);
+
     if (error) {
       setError(error.message);
       return;
     }
+
     setSent(true);
   }
 
   return (
     <main className="login-shell">
       <section className="login-card">
-        <div className="brand-mark"><MailKey size={25} /></div>
+        <div className="brand-mark"><Mail size={25} /></div>
         <p className="eyebrow">INTERNAL TOOL</p>
         <h1>Reset password</h1>
-        <p className="muted">We will send a password reset link to your email address.</p>
+        <p className="muted">
+          We will send a password reset link to your email address.
+        </p>
 
         {sent ? (
           <>
-            <div className="notice">If the account exists, a reset email has been sent.</div>
-            <a className="ghost full" href="/login">Back to sign in</a>
+            <div className="success-box">
+              If an account exists for this email address, a reset link has been sent.
+            </div>
+            <a className="primary full" href="/login">Return to sign in</a>
           </>
         ) : (
           <form onSubmit={sendReset} className="form-stack">
@@ -54,11 +60,14 @@ export default function ForgotPasswordPage() {
                 placeholder="name@company.com"
               />
             </label>
+
             {error && <div className="error-box">{error}</div>}
+
             <button className="primary full" disabled={loading}>
               {loading ? "Sending…" : "Send reset link"}
             </button>
-            <a className="link-btn centered-link" href="/login">Back to sign in</a>
+
+            <a className="auth-link" href="/login">Back to sign in</a>
           </form>
         )}
       </section>
