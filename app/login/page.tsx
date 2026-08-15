@@ -19,7 +19,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError("Login failed. Please check your email and password.");
+      setError(error.message || "Login failed. Please check your email and password.");
       setLoading(false);
       return;
     }
@@ -67,6 +67,7 @@ export default function LoginPage() {
           <button className="primary full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
           </button>
+          <a className="link-btn centered-link" href="/forgot-password">Forgot password?</a>
         </form>
       </section>
     </main>
