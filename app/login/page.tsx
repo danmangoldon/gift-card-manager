@@ -64,10 +64,14 @@ export default function LoginPage() {
 
           {error && <div className="error-box">{error}</div>}
 
-          <button className="primary full" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
-          <a className="link-btn centered-link" href="/forgot-password">Forgot password?</a>
+          <div className="login-actions">
+            <button className="primary full" disabled={loading}>
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+            <a className="login-forgot" href="/forgot-password">
+              Forgot password?
+            </a>
+          </div>
         </form>
       </section>
     </main>
