@@ -9,15 +9,18 @@ import {
   FileSpreadsheet,
   Gift,
   LogOut,
+  Pencil,
   Plus,
   Search,
+  Trash2,
   Upload,
+  Users,
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import * as XLSX from "xlsx";
 
-type Role = "admin" | "manager" | "viewer";
+type Role = "admin" | "user";
 
 type GiftCard = {
   id: string;
@@ -55,21 +58,29 @@ export default function GiftCardDashboard({
   const [filter, setFilter] = useState<"all" | "available" | "used">("all");
   const [showUpload, setShowUpload] = useState(false);
   const [useCard, setUseCard] = useState<GiftCard | null>(null);
+  const [editCard, setEditCard] = useState<GiftCard | null>(null);
   const [visiblePins, setVisiblePins] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState("");
-  const [role, setRole] = useState<Role>("viewer");
+  const [role, setRole] = useState<Role>("user");
 
   async function loadCards() {
     setLoading(true);
     setMessage("");
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .maybeSingle();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (profileError) setMessage(profileError.message);
-    if (profile?.role) setRole(profile.role as Role);
+    if (user) {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) setMessage(profileError.message);
+      if (profile?.role) setRole(profile.role as Role);
+    }
 
     const { data, error } = await supabase
       .from("gift_cards")
@@ -140,6 +151,26 @@ export default function GiftCardDashboard({
     await loadCards();
   }
 
+  async function deleteCard(card: GiftCard) {
+    if (role !== "admin") return;
+
+    if (
+      !window.confirm(
+        `Delete gift card ${card.code}?\n\nThis removes the card from the active list. The deletion remains recorded in the audit log.`
+      )
+    ) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("gift_cards")
+      .delete()
+      .eq("id", card.id);
+
+    if (error) return setMessage(error.message);
+    await loadCards();
+  }
+
   function copy(text: string) {
     navigator.clipboard.writeText(text);
     setMessage("Copied to clipboard");
@@ -171,7 +202,12 @@ export default function GiftCardDashboard({
         <div className="user-area">
           <span className="user-email">{userEmail} · {role}</span>
           {role === "admin" && (
-            <a className="ghost" href="/admin/audit">Audit log</a>
+            <>
+              <a className="ghost" href="/admin/users">
+                <Users size={16} /> Users
+              </a>
+              <a className="ghost" href="/admin/audit">Audit log</a>
+            </>
           )}
           <button className="ghost" onClick={logout}>
             <LogOut size={17} /> Sign out
@@ -229,7 +265,7 @@ export default function GiftCardDashboard({
           ))}
         </div>
 
-        {role !== "viewer" && (
+        {role === "admin" && (
           <button className="primary" onClick={() => setShowUpload(true)}>
             <Plus size={18} /> Add gift cards
           </button>
@@ -246,9 +282,9 @@ export default function GiftCardDashboard({
             <Gift size={30} />
             <strong>No gift cards found</strong>
             <span>
-              {role === "viewer"
-                ? "No cards are available in the current view."
-                : "Add a batch or change the current filter."}
+              {role === "admin"
+                ? "Add a batch or change the current filter."
+                : "No cards are available in the current view."}
             </span>
           </div>
         ) : (
@@ -332,22 +368,42 @@ export default function GiftCardDashboard({
                         {card.used_by && <small>{card.used_by}</small>}
                       </td>
                       <td className="actions">
-                        {role === "viewer" ? (
-                          <span className="user-email">Read only</span>
-                        ) : !isUsed ? (
-                          <button
-                            className="small-primary"
-                            onClick={() => setUseCard(card)}
-                          >
-                            <CheckCircle2 size={15} /> Mark used
-                          </button>
-                        ) : role === "admin" ? (
-                          <button className="link-btn" onClick={() => restore(card)}>
-                            Restore
-                          </button>
-                        ) : (
-                          <span className="used-lock">Used</span>
-                        )}
+                        <div className="action-group">
+                          {!isUsed ? (
+                            <button
+                              className="small-primary"
+                              onClick={() => setUseCard(card)}
+                            >
+                              <CheckCircle2 size={15} /> Mark used
+                            </button>
+                          ) : role === "admin" ? (
+                            <button className="link-btn" onClick={() => restore(card)}>
+                              Restore
+                            </button>
+                          ) : (
+                            <span className="used-lock">Used</span>
+                          )}
+
+                          {role === "admin" && !isUsed && (
+                            <button
+                              className="icon-action"
+                              title="Edit gift card"
+                              onClick={() => setEditCard(card)}
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          )}
+
+                          {role === "admin" && (
+                            <button
+                              className="icon-action danger-action"
+                              title="Delete gift card"
+                              onClick={() => deleteCard(card)}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -375,6 +431,17 @@ export default function GiftCardDashboard({
           onClose={() => setUseCard(null)}
           onSaved={async () => {
             setUseCard(null);
+            await loadCards();
+          }}
+        />
+      )}
+
+      {editCard && (
+        <EditModal
+          card={editCard}
+          onClose={() => setEditCard(null)}
+          onSaved={async () => {
+            setEditCard(null);
             await loadCards();
           }}
         />
@@ -705,6 +772,129 @@ function UseModal({
           <button className="ghost" onClick={onClose}>Cancel</button>
           <button className="primary" onClick={save} disabled={saving}>
             {saving ? "Saving…" : "Confirm used"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+
+function EditModal({
+  card,
+  onClose,
+  onSaved,
+}: {
+  card: GiftCard;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [code, setCode] = useState(card.code);
+  const [pin, setPin] = useState(card.pin);
+  const [value, setValue] = useState(String(card.value));
+  const [currency, setCurrency] = useState(card.currency);
+  const [batch, setBatch] = useState(card.batch_label ?? "");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setError("");
+
+    if (!code.trim() || !pin.trim()) {
+      return setError("Code and PIN are required.");
+    }
+
+    const numericValue = Number(value);
+    if (!numericValue || numericValue <= 0) {
+      return setError("Enter a valid value greater than zero.");
+    }
+
+    const normalizedCurrency = currency.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(normalizedCurrency)) {
+      return setError("Currency must be a 3-letter code such as CHF, EUR or GBP.");
+    }
+
+    setSaving(true);
+    const { error } = await supabase
+      .from("gift_cards")
+      .update({
+        code: code.trim(),
+        pin: pin.trim(),
+        value: numericValue,
+        currency: normalizedCurrency,
+        batch_label: batch.trim() || null,
+      })
+      .eq("id", card.id)
+      .eq("status", "available");
+
+    setSaving(false);
+
+    if (error) {
+      if (error.code === "23505") {
+        return setError("This gift card code already exists.");
+      }
+      return setError(error.message);
+    }
+
+    onSaved();
+  }
+
+  return (
+    <div className="modal-backdrop">
+      <section className="modal">
+        <button className="modal-close" onClick={onClose}>
+          <X size={20} />
+        </button>
+
+        <p className="eyebrow">ADMIN</p>
+        <h2>Edit gift card</h2>
+        <p className="muted">
+          Changes are written to the audit log. Used cards must be restored before editing.
+        </p>
+
+        <label>
+          Code
+          <input value={code} onChange={(e) => setCode(e.target.value)} />
+        </label>
+
+        <label>
+          PIN
+          <input value={pin} onChange={(e) => setPin(e.target.value)} />
+        </label>
+
+        <div className="two-col">
+          <label>
+            Value
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+            />
+          </label>
+
+          <label>
+            Currency
+            <input
+              maxLength={3}
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+            />
+          </label>
+        </div>
+
+        <label>
+          Batch <span className="optional">(optional)</span>
+          <input value={batch} onChange={(e) => setBatch(e.target.value)} />
+        </label>
+
+        {error && <div className="error-box">{error}</div>}
+
+        <div className="modal-actions">
+          <button className="ghost" onClick={onClose}>Cancel</button>
+          <button className="primary" onClick={save} disabled={saving}>
+            {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
       </section>
