@@ -493,3 +493,216 @@ textarea { resize: vertical; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== Admin/User management update ===== */
+
+/* Login spacing */
+.login-actions {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.login-forgot {
+  display: inline-block;
+  width: fit-content;
+  margin: 0 auto;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 13px;
+}
+
+.login-forgot:hover {
+  color: var(--text);
+}
+
+/* Dashboard admin actions */
+.action-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.icon-action {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--muted);
+  display: inline-grid;
+  place-items: center;
+}
+
+.icon-action:hover {
+  color: var(--text);
+  background: #e6e8e3;
+}
+
+.icon-action:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.danger-action:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+/* Admin pages */
+.admin-page-header {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.back-button {
+  width: fit-content;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 9px;
+  background: var(--soft);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.back-button:hover {
+  background: #e6e8e3;
+}
+
+.audit-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.result-count {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.compact-empty {
+  padding: 34px 20px;
+}
+
+/* User management */
+.permissions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.permission-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 18px;
+  display: grid;
+  gap: 7px;
+}
+
+.permission-card strong {
+  font-size: 16px;
+}
+
+.permission-card span {
+  font-size: 13px;
+}
+
+.permission-card small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.admin-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.admin-panel-heading h2 {
+  font-size: 24px;
+}
+
+.invite-form {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 180px auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.invite-form label {
+  margin-top: 12px;
+}
+
+.invite-form select,
+.role-select {
+  width: 100%;
+  margin-top: 7px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  outline: none;
+}
+
+.invite-form select:focus,
+.role-select:focus {
+  border-color: #858b85;
+  box-shadow: 0 0 0 3px rgba(20, 24, 20, .06);
+}
+
+.invite-button {
+  margin-bottom: 0;
+}
+
+.admin-message {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+.user-toolbar {
+  margin-top: 4px;
+}
+
+.users-table {
+  min-width: 900px;
+}
+
+.users-table td strong {
+  display: block;
+}
+
+@media (max-width: 850px) {
+  .permissions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-form {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .result-count {
+    justify-self: start;
+  }
+}
