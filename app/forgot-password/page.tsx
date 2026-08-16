@@ -17,7 +17,8 @@ export default function ForgotPasswordPage() {
     setMessage("");
     setError("");
 
-    const redirectTo = `${window.location.origin}/auth/callback?next=/reset-password`;
+    const redirectTo =
+  "https://gift-card-manager-sooty.vercel.app/auth/callback?next=/reset-password";
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
