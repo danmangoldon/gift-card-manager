@@ -274,469 +274,615 @@ export default function GiftCardDashboard({
   }
 
   return (
-    <main className="clean-shell">
-      <section className="clean-content">
-        <header className="clean-header">
-          <div className="clean-header-left">
+    <main className="dashboard-shell">
+      <section className="dashboard-content">
+        <header className="dashboard-header">
+          <div className="dashboard-header-left">
             <img
               src="/on-logo-black.svg"
               alt="On"
-              className="clean-logo"
+              className="dashboard-logo"
             />
 
             <div>
-              <p className="eyebrow">
-                GIFT CARD MANAGEMENT · INTERNAL
-              </p>
+              <p className="eyebrow">GIFT CARD MANAGEMENT · INTERNAL</p>
               <h1>Dashboard</h1>
             </div>
           </div>
 
-          <div className="clean-header-right">
-            <div className="clean-user-card">
-              <div className="clean-avatar">
-                {userName
-                  .split(" ")
-                  .map((part) => part.charAt(0))
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </div>
-
-              <div className="clean-user-text">
-                <strong>{userName}</strong>
-                <span>{userEmail}</span>
-              </div>
+          <div className="dashboard-account">
+            <div className="dashboard-user desktop-only">
+              <strong>{userName}</strong>
+              <span>{userEmail}</span>
             </div>
 
-            <div className="clean-header-actions">
-              {role === "admin" && (
-                <>
-                  <a
-                    className="clean-icon-button"
-                    href="/admin/users"
-                    title="Users"
-                  >
-                    <Users size={17} />
-                  </a>
-
-                  <a
-                    className="clean-icon-button"
-                    href="/admin/audit"
-                    title="Audit log"
-                  >
-                    <FileText size={17} />
-                  </a>
-                </>
-              )}
-
-              <button
-                className="clean-signout"
-                onClick={logout}
-              >
-                <LogOut size={17} />
-                Sign out
-              </button>
+            <div className="dashboard-avatar" title={`${userName} · ${role}`}>
+              {userName
+                .split(" ")
+                .map((part) => part.charAt(0))
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()}
             </div>
+
+            {role === "admin" && (
+              <>
+                <a
+                  className="dashboard-icon"
+                  href="/admin/users"
+                  title="Users"
+                  aria-label="Users"
+                >
+                  <Users size={17} />
+                </a>
+
+                <a
+                  className="dashboard-icon"
+                  href="/admin/audit"
+                  title="Audit log"
+                  aria-label="Audit log"
+                >
+                  <FileText size={17} />
+                </a>
+              </>
+            )}
+
+            <button
+              className="dashboard-signout"
+              onClick={logout}
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <LogOut size={17} />
+              <span>Sign out</span>
+            </button>
           </div>
         </header>
 
-        <section className="clean-stats">
-          <article className="clean-stat available-stat">
-            <div className="clean-stat-icon">
-              <Gift size={22} />
+        <section className="dashboard-stats desktop-only">
+          <article className="dashboard-stat available">
+            <div className="dashboard-stat-icon">
+              <Gift size={20} />
             </div>
-
-            <div>
+            <div className="dashboard-stat-copy">
               <span>Available cards</span>
               <strong>{available}</strong>
               <small>Full balance available</small>
             </div>
           </article>
 
-          <article className="clean-stat partial-stat">
-            <div className="clean-stat-icon">
-              ◔
-            </div>
-
-            <div>
+          <article className="dashboard-stat partial">
+            <div className="dashboard-stat-icon">◔</div>
+            <div className="dashboard-stat-copy">
               <span>Partially used</span>
               <strong>{partial}</strong>
               <small>Remaining balance available</small>
             </div>
           </article>
 
-          <article className="clean-stat used-stat">
-            <div className="clean-stat-icon">
-              <CheckCircle2 size={22} />
+          <article className="dashboard-stat used">
+            <div className="dashboard-stat-icon">
+              <CheckCircle2 size={20} />
             </div>
-
-            <div>
+            <div className="dashboard-stat-copy">
               <span>Used cards</span>
               <strong>{used}</strong>
               <small>No remaining balance</small>
             </div>
           </article>
 
-          <article className="clean-value-card">
-            <div className="clean-value-title">
-              Available value{" "}
-              <span>(latest balances)</span>
+          <article className="dashboard-value">
+            <div className="dashboard-value-title">
+              Available value <span>(latest balances)</span>
             </div>
 
-            <div className="clean-currency-values">
+            <div className="dashboard-currencies">
               {valuesByCurrency.length === 0 ? (
                 <strong>—</strong>
               ) : (
                 valuesByCurrency.map(([currency, amount]) => (
                   <div key={currency}>
-                    <strong>
-                      {formatMoney(amount)}
-                    </strong>
+                    <strong>{formatMoney(amount)}</strong>
                     <span>{currency}</span>
                   </div>
                 ))
               )}
             </div>
 
-            <small>
-              Values are kept separate by currency
-            </small>
+            <small>Values are kept separate by currency</small>
           </article>
         </section>
 
-        <section className="clean-toolbar">
-          <div className="clean-search">
-            <Search size={18} />
+        <section className="mobile-summary mobile-only">
+          <article className="mobile-summary-card available">
+            <span>Available</span>
+            <strong>{available}</strong>
+          </article>
 
+          <article className="mobile-summary-card partial">
+            <span>Partially used</span>
+            <strong>{partial}</strong>
+          </article>
+
+          <article className="mobile-summary-card used">
+            <span>Used</span>
+            <strong>{used}</strong>
+          </article>
+
+          <article className="mobile-summary-card">
+            <span>Available value</span>
+            <div className="mobile-value-lines">
+              {valuesByCurrency.length === 0 ? (
+                <b>—</b>
+              ) : (
+                valuesByCurrency.map(([currency, amount]) => (
+                  <div key={currency}>
+                    <b>{formatMoney(amount)}</b>
+                    <small>{currency}</small>
+                  </div>
+                ))
+              )}
+            </div>
+          </article>
+        </section>
+
+        <section className="dashboard-toolbar desktop-only">
+          <div className="dashboard-search">
+            <Search size={17} />
             <input
               placeholder="Search code, recipient, batch..."
               value={query}
-              onChange={(event) =>
-                setQuery(event.target.value)
-              }
+              onChange={(event) => setQuery(event.target.value)}
             />
           </div>
 
-          <div className="clean-filters">
-            {(
-              [
-                "all",
-                "available",
-                "partial",
-                "used",
-              ] as const
-            ).map((currentFilter) => (
-              <button
-                key={currentFilter}
-                className={
-                  filter === currentFilter
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setFilter(currentFilter)
-                }
-              >
-                {currentFilter === "all"
-                  ? "All"
-                  : currentFilter === "available"
-                  ? "Available"
-                  : currentFilter === "partial"
-                  ? "Partially used"
-                  : "Used"}
-              </button>
-            ))}
+          <div className="dashboard-filters">
+            {(["all", "available", "partial", "used"] as const).map(
+              (currentFilter) => (
+                <button
+                  key={currentFilter}
+                  className={filter === currentFilter ? "active" : ""}
+                  onClick={() => setFilter(currentFilter)}
+                >
+                  {currentFilter === "all"
+                    ? "All"
+                    : currentFilter === "available"
+                    ? "Available"
+                    : currentFilter === "partial"
+                    ? "Partially used"
+                    : "Used"}
+                </button>
+              )
+            )}
           </div>
 
           {role === "admin" && (
             <button
-              className="clean-add"
+              className="dashboard-add"
               onClick={() => setShowUpload(true)}
             >
-              <Plus size={18} />
+              <Plus size={17} />
               Add gift card
             </button>
           )}
         </section>
 
-        {message && (
-          <div className="notice">{message}</div>
-        )}
-
-        <section className="clean-table-card">
-          {loading ? (
-            <div className="empty">
-              Loading gift cards…
+        <section className="mobile-controls mobile-only">
+          <div className="mobile-search-row">
+            <div className="mobile-search">
+              <Search size={16} />
+              <input
+                placeholder="Search gift cards..."
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="empty">
-              <Gift size={30} />
-              <strong>No gift cards found</strong>
-            </div>
-          ) : (
-            <div className="table-wrap clean-table-wrap">
-              <table className="clean-table">
-                <thead>
-                  <tr>
-                    <th>Status</th>
-                    <th>Code</th>
-                    <th>PIN</th>
-                    <th>Original</th>
-                    <th>Remaining</th>
-                    <th>Currency</th>
-                    <th>Batch</th>
-                    <th>Recipient / Vendor</th>
-                    <th>Last check</th>
-                    <th>Used</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
 
-                <tbody>
-                  {filtered.map((card) => {
-                    const viewStatus =
-                      effectiveStatus(card);
+            {role === "admin" && (
+              <button
+                className="mobile-add"
+                onClick={() => setShowUpload(true)}
+                title="Add gift card"
+                aria-label="Add gift card"
+              >
+                <Plus size={20} />
+              </button>
+            )}
+          </div>
 
-                    const isUsed =
-                      viewStatus === "used";
+          <div className="mobile-filter-scroll">
+            {(["all", "available", "partial", "used"] as const).map(
+              (currentFilter) => {
+                const count =
+                  currentFilter === "all"
+                    ? cards.length
+                    : currentFilter === "available"
+                    ? available
+                    : currentFilter === "partial"
+                    ? partial
+                    : used;
 
-                    const remaining =
-                      effectiveBalance(card);
+                return (
+                  <button
+                    key={currentFilter}
+                    className={`mobile-filter-chip ${
+                      filter === currentFilter ? "active" : ""
+                    }`}
+                    onClick={() => setFilter(currentFilter)}
+                  >
+                    {currentFilter === "all"
+                      ? "All"
+                      : currentFilter === "available"
+                      ? "Available"
+                      : currentFilter === "partial"
+                      ? "Partial"
+                      : "Used"}{" "}
+                    {count}
+                  </button>
+                );
+              }
+            )}
+          </div>
+        </section>
 
-                    return (
-                      <tr
-                        key={card.id}
-                        className={
-                          viewStatus === "used"
-                            ? "used-row"
-                            : viewStatus ===
-                              "partial"
-                            ? "partial-row"
-                            : ""
-                        }
-                      >
-                        <td data-label="Status">
-                          <span
-                            className={`status ${viewStatus}`}
-                          >
-                            {viewStatus === "used"
-                              ? "Used"
-                              : viewStatus ===
-                                "partial"
-                              ? "Partially used"
-                              : "Available"}
-                          </span>
-                        </td>
+        {message && <div className="notice">{message}</div>}
 
-                        <td data-label="Code">
-                          <div className="secret-row">
-                            <code>{card.code}</code>
+        {loading ? (
+          <div className="empty">Loading gift cards…</div>
+        ) : filtered.length === 0 ? (
+          <div className="empty">
+            <Gift size={30} />
+            <strong>No gift cards found</strong>
+          </div>
+        ) : (
+          <>
+            <section className="desktop-gift-table desktop-only">
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Code</th>
+                      <th>PIN</th>
+                      <th>Original</th>
+                      <th>Remaining</th>
+                      <th>Currency</th>
+                      <th>Batch</th>
+                      <th>Recipient / Vendor</th>
+                      <th>Last check</th>
+                      <th>Used</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
 
-                            {!isUsed && (
-                              <button
-                                className="icon-btn"
-                                title="Copy code, PIN and value"
-                                onClick={() =>
-                                  copyGiftCard(card)
-                                }
-                              >
-                                <Clipboard size={14} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
+                  <tbody>
+                    {filtered.map((card) => {
+                      const viewStatus = effectiveStatus(card);
+                      const isUsed = viewStatus === "used";
+                      const remaining = effectiveBalance(card);
 
-                        <td data-label="PIN">
-                          {isUsed ? (
-                            <code className="used-secret">
-                              ••••
-                            </code>
-                          ) : (
-                            <div className="secret-row">
-                              <code>
-                                {visiblePins[card.id]
-                                  ? card.pin
-                                  : "••••"}
-                              </code>
-
-                              <button
-                                className="icon-btn"
-                                title="Show or hide PIN"
-                                onClick={() =>
-                                  setVisiblePins(
-                                    (state) => ({
-                                      ...state,
-                                      [card.id]:
-                                        !state[
-                                          card.id
-                                        ],
-                                    })
-                                  )
-                                }
-                              >
-                                {visiblePins[
-                                  card.id
-                                ] ? (
-                                  <EyeOff
-                                    size={14}
-                                  />
-                                ) : (
-                                  <Eye size={14} />
-                                )}
-                              </button>
-                            </div>
-                          )}
-                        </td>
-
-                        <td data-label="Original">
-                          {formatMoney(
-                            Number(card.value)
-                          )}
-                        </td>
-
-                        <td data-label="Remaining">
-                          <strong
-                            className={`balance-value ${viewStatus}`}
-                          >
-                            {formatMoney(
-                              remaining
-                            )}
-                          </strong>
-                        </td>
-
-                        <td data-label="Currency">
-                          {card.currency}
-                        </td>
-
-                        <td data-label="Batch">
-                          {card.batch_label || "—"}
-                        </td>
-
-                        <td data-label="Recipient / Vendor">
-                          <div>
-                            {card.recipient || "—"}
-                          </div>
-
-                          {card.note && (
-                            <small>
-                              {card.note}
-                            </small>
-                          )}
-                        </td>
-
-                        <td data-label="Last check">
-                          {card.last_balance_check
-                            ? new Date(
-                                card.last_balance_check
-                              ).toLocaleString(
-                                undefined,
-                                {
-                                  dateStyle:
-                                    "medium",
-                                  timeStyle:
-                                    "short",
-                                }
-                              )
-                            : "—"}
-                        </td>
-
-                        <td data-label="Used">
-                          {card.used_at
-                            ? new Date(
-                                card.used_at
-                              ).toLocaleString(
-                                undefined,
-                                {
-                                  dateStyle:
-                                    "medium",
-                                  timeStyle:
-                                    "short",
-                                }
-                              )
-                            : "—"}
-                        </td>
-
-                        <td
-                          data-label="Actions"
-                          className="actions"
+                      return (
+                        <tr
+                          key={card.id}
+                          className={
+                            viewStatus === "used"
+                              ? "used-row"
+                              : viewStatus === "partial"
+                              ? "partial-row"
+                              : ""
+                          }
                         >
-                          <div className="clean-actions">
-                            {!isUsed ? (
-                              <button
-                                className="clean-check-button"
-                                title="Check balance"
-                                onClick={() =>
-                                  setBalanceCard(
-                                    card
-                                  )
-                                }
-                              >
-                                Check
-                                <ExternalLink
-                                  size={13}
-                                />
-                              </button>
-                            ) : role ===
-                              "admin" ? (
-                              <button
-                                className="clean-restore"
-                                onClick={() =>
-                                  restore(card)
-                                }
-                              >
-                                Restore
-                              </button>
-                            ) : (
-                              <span className="used-lock">
-                                Used
-                              </span>
-                            )}
+                          <td>
+                            <span className={`status ${viewStatus}`}>
+                              {viewStatus === "used"
+                                ? "Used"
+                                : viewStatus === "partial"
+                                ? "Partially used"
+                                : "Available"}
+                            </span>
+                          </td>
 
-                            {role ===
-                              "admin" &&
-                              !isUsed && (
+                          <td>
+                            <div className="secret-row">
+                              <code>{card.code}</code>
+                              {!isUsed && (
                                 <button
-                                  className="clean-icon-action"
-                                  title="Edit gift card"
+                                  className="icon-btn"
+                                  title="Copy code, PIN and value"
+                                  onClick={() => copyGiftCard(card)}
+                                >
+                                  <Clipboard size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+
+                          <td>
+                            {isUsed ? (
+                              <code className="used-secret">••••</code>
+                            ) : (
+                              <div className="secret-row">
+                                <code>
+                                  {visiblePins[card.id] ? card.pin : "••••"}
+                                </code>
+                                <button
+                                  className="icon-btn"
+                                  title="Show or hide PIN"
                                   onClick={() =>
-                                    setEditCard(
-                                      card
-                                    )
+                                    setVisiblePins((state) => ({
+                                      ...state,
+                                      [card.id]: !state[card.id],
+                                    }))
                                   }
                                 >
-                                  <Pencil
-                                    size={14}
-                                  />
+                                  {visiblePins[card.id] ? (
+                                    <EyeOff size={14} />
+                                  ) : (
+                                    <Eye size={14} />
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </td>
+
+                          <td>{formatMoney(Number(card.value))}</td>
+
+                          <td>
+                            <strong
+                              className={`balance-value ${viewStatus}`}
+                            >
+                              {formatMoney(remaining)}
+                            </strong>
+                          </td>
+
+                          <td>{card.currency}</td>
+                          <td>{card.batch_label || "—"}</td>
+
+                          <td>
+                            <div>{card.recipient || "—"}</div>
+                            {card.note && <small>{card.note}</small>}
+                          </td>
+
+                          <td>
+                            {card.last_balance_check
+                              ? new Date(
+                                  card.last_balance_check
+                                ).toLocaleString(undefined, {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                })
+                              : "—"}
+                          </td>
+
+                          <td>
+                            {card.used_at
+                              ? new Date(card.used_at).toLocaleString(
+                                  undefined,
+                                  {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  }
+                                )
+                              : "—"}
+                          </td>
+
+                          <td className="actions">
+                            <div className="dashboard-actions">
+                              {!isUsed ? (
+                                <>
+                                  <button
+                                    className="action-check"
+                                    onClick={() => setBalanceCard(card)}
+                                  >
+                                    Check
+                                    <ExternalLink size={12} />
+                                  </button>
+
+                                  <button
+                                    className="action-used"
+                                    onClick={() => setUseCard(card)}
+                                  >
+                                    <CheckCircle2 size={12} />
+                                    Mark used
+                                  </button>
+                                </>
+                              ) : role === "admin" ? (
+                                <button
+                                  className="action-restore"
+                                  onClick={() => restore(card)}
+                                >
+                                  Restore
+                                </button>
+                              ) : (
+                                <span className="used-lock">Used</span>
+                              )}
+
+                              {role === "admin" && !isUsed && (
+                                <button
+                                  className="action-icon"
+                                  title="Edit gift card"
+                                  onClick={() => setEditCard(card)}
+                                >
+                                  <Pencil size={13} />
                                 </button>
                               )}
 
-                            {role ===
-                              "admin" && (
-                              <button
-                                className="clean-icon-action"
-                                title="Delete gift card"
-                                onClick={() =>
-                                  deleteCard(
-                                    card
-                                  )
-                                }
-                              >
-                                <Trash2
-                                  size={14}
-                                />
-                              </button>
+                              {role === "admin" && (
+                                <button
+                                  className="action-icon danger"
+                                  title="Delete gift card"
+                                  onClick={() => deleteCard(card)}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="mobile-card-list mobile-only">
+              {filtered.map((card) => {
+                const viewStatus = effectiveStatus(card);
+                const isUsed = viewStatus === "used";
+                const remaining = effectiveBalance(card);
+
+                return (
+                  <article
+                    key={card.id}
+                    className={`mobile-gift-card ${viewStatus}`}
+                  >
+                    <div className="mobile-card-top">
+                      <span className={`status ${viewStatus}`}>
+                        {viewStatus === "used"
+                          ? "Used"
+                          : viewStatus === "partial"
+                          ? "Partially used"
+                          : "Available"}
+                      </span>
+
+                      <strong className="mobile-card-value">
+                        {formatMoney(remaining)} {card.currency}
+                      </strong>
+                    </div>
+
+                    <div className="mobile-code-line">
+                      <code>{card.code}</code>
+                      {!isUsed && (
+                        <button
+                          className="icon-btn"
+                          title="Copy code, PIN and value"
+                          onClick={() => copyGiftCard(card)}
+                        >
+                          <Clipboard size={15} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mobile-pin-line">
+                      <span>PIN</span>
+                      {isUsed ? (
+                        <code>••••</code>
+                      ) : (
+                        <>
+                          <code>
+                            {visiblePins[card.id] ? card.pin : "••••"}
+                          </code>
+                          <button
+                            className="icon-btn"
+                            title="Show or hide PIN"
+                            onClick={() =>
+                              setVisiblePins((state) => ({
+                                ...state,
+                                [card.id]: !state[card.id],
+                              }))
+                            }
+                          >
+                            {visiblePins[card.id] ? (
+                              <EyeOff size={15} />
+                            ) : (
+                              <Eye size={15} />
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="mobile-balance-box">
+                      <span>
+                        {viewStatus === "partial"
+                          ? `Original ${formatMoney(Number(card.value))} ${
+                              card.currency
+                            }`
+                          : "Remaining balance"}
+                      </span>
+                      <strong className={`balance-value ${viewStatus}`}>
+                        {formatMoney(remaining)} {card.currency}
+                      </strong>
+                    </div>
+
+                    {(card.batch_label ||
+                      card.recipient ||
+                      card.note ||
+                      card.last_balance_check) && (
+                      <div className="mobile-card-meta">
+                        {card.batch_label && <strong>{card.batch_label}</strong>}
+                        {card.recipient && (
+                          <span>Recipient: {card.recipient}</span>
+                        )}
+                        {card.note && <span>{card.note}</span>}
+                        {card.last_balance_check && (
+                          <span>
+                            Last checked{" "}
+                            {new Date(
+                              card.last_balance_check
+                            ).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mobile-card-actions">
+                      {!isUsed ? (
+                        <>
+                          <button
+                            className="action-check"
+                            onClick={() => setBalanceCard(card)}
+                          >
+                            <ExternalLink size={13} />
+                            Check balance
+                          </button>
+
+                          <button
+                            className="action-used"
+                            onClick={() => setUseCard(card)}
+                          >
+                            <CheckCircle2 size={13} />
+                            Mark used
+                          </button>
+                        </>
+                      ) : role === "admin" ? (
+                        <button
+                          className="action-restore"
+                          onClick={() => restore(card)}
+                        >
+                          Restore
+                        </button>
+                      ) : (
+                        <span className="used-lock">Used</span>
+                      )}
+
+                      {role === "admin" && !isUsed && (
+                        <button
+                          className="action-icon"
+                          title="Edit gift card"
+                          onClick={() => setEditCard(card)}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      )}
+
+                      {role === "admin" && (
+                        <button
+                          className="action-icon danger"
+                          title="Delete gift card"
+                          onClick={() => deleteCard(card)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+          </>
+        )}
       </section>
 
       {showUpload && (
@@ -1329,7 +1475,7 @@ function UploadModal({
                 )
               }
               placeholder={
-                "638889001467108225188    2717\n638889001595108225194    2412"
+                "638889001467108225188    2717\   2412"
               }
             />
           </label>
@@ -1803,80 +1949,46 @@ function EditModal({
   );
 }
 
-function parseGiftCards(
-  input: string
-): ParsedCard[] {
-  const seen =
-    new Set<string>();
-
-  const rows: ParsedCard[] =
-    [];
+function parseGiftCards(input: string): ParsedCard[] {
+  const seen = new Set<string>();
+  const rows: ParsedCard[] = [];
 
   for (const line of input.split(/\r?\n/)) {
-    const trimmed =
-      line.trim();
-
+    const trimmed = line.trim();
     if (!trimmed) continue;
 
-    const match =
-      trimmed.match(
-        /^["']?([A-Za-z0-9_-]{8,})["']?[\s,;]+["']?([A-Za-z0-9_-]{3,12})["']?/
-      );
-
+    const match = trimmed.match(
+      /^["']?([A-Za-z0-9_-]{8,})["']?[\s,;]+["']?([A-Za-z0-9_-]{3,12})["']?/
+    );
     if (!match) continue;
 
     const code = match[1];
     const pin = match[2];
 
-    if (seen.has(code)) {
-      continue;
-    }
+    if (seen.has(code)) continue;
 
     seen.add(code);
-
-    rows.push({
-      code,
-      pin,
-    });
+    rows.push({ code, pin });
   }
 
   return rows;
 }
 
-function normalizeKey(
-  key: string
-) {
-  return key
-    .toLowerCase()
-    .trim()
-    .replace(/[\s_-]+/g, "");
+function normalizeKey(key: string) {
+  return key.toLowerCase().trim().replace(/[\s_-]+/g, "");
 }
 
 function parseStructuredRows(
-  rows: Record<
-    string,
-    unknown
-  >[]
+  rows: Record<string, unknown>[]
 ): ParsedCard[] {
-  const seen =
-    new Set<string>();
-
-  const output: ParsedCard[] =
-    [];
+  const seen = new Set<string>();
+  const output: ParsedCard[] = [];
 
   for (const row of rows) {
-    const normalized: Record<
-      string,
-      unknown
-    > = {};
+    const normalized: Record<string, unknown> = {};
 
-    for (const [
-      key,
-      val,
-    ] of Object.entries(row)) {
-      normalized[
-        normalizeKey(key)
-      ] = val;
+    for (const [key, val] of Object.entries(row)) {
+      normalized[normalizeKey(key)] = val;
     }
 
     const code = String(
@@ -1893,13 +2005,7 @@ function parseStructuredRows(
         ""
     ).trim();
 
-    if (
-      !code ||
-      !pin ||
-      seen.has(code)
-    ) {
-      continue;
-    }
+    if (!code || !pin || seen.has(code)) continue;
 
     const rawValue =
       normalized.value ??
@@ -1907,34 +2013,28 @@ function parseStructuredRows(
       normalized.cardvalue;
 
     const numericValue =
-      rawValue === undefined ||
-      rawValue === ""
+      rawValue === undefined || rawValue === ""
         ? undefined
         : Number(
             String(rawValue)
-              .replace(
-                /[^\d.,-]/g,
-                ""
-              )
+              .replace(/[^\d.,-]/g, "")
               .replace(",", ".")
           );
 
-    const rawCurrency =
-      String(
-        normalized.currency ??
-          normalized.curr ??
-          ""
-      )
-        .trim()
-        .toUpperCase();
+    const rawCurrency = String(
+      normalized.currency ??
+        normalized.curr ??
+        ""
+    )
+      .trim()
+      .toUpperCase();
 
-    const rawBatch =
-      String(
-        normalized.batch ??
-          normalized.batchlabel ??
-          normalized.description ??
-          ""
-      ).trim();
+    const rawBatch = String(
+      normalized.batch ??
+        normalized.batchlabel ??
+        normalized.description ??
+        ""
+    ).trim();
 
     seen.add(code);
 
@@ -1942,37 +2042,26 @@ function parseStructuredRows(
       code,
       pin,
       value:
-        numericValue &&
-        numericValue > 0
+        numericValue && numericValue > 0
           ? numericValue
           : undefined,
       currency:
-        /^[A-Z]{3}$/.test(
-          rawCurrency
-        )
+        /^[A-Z]{3}$/.test(rawCurrency)
           ? rawCurrency
           : undefined,
-      batch:
-        rawBatch ||
-        undefined,
+      batch: rawBatch || undefined,
     });
   }
 
   return output;
 }
 
-function parseCsvOrDelimited(
-  input: string
-): ParsedCard[] {
+function parseCsvOrDelimited(input: string): ParsedCard[] {
   const lines = input
     .split(/\r?\n/)
-    .filter((line) =>
-      line.trim()
-    );
+    .filter((line) => line.trim());
 
-  if (lines.length < 2) {
-    return [];
-  }
+  if (lines.length < 2) return [];
 
   const delimiter =
     lines[0].includes("\t")
@@ -1981,45 +2070,26 @@ function parseCsvOrDelimited(
       ? ";"
       : ",";
 
-  const headers =
-    lines[0]
+  const headers = lines[0]
+    .split(delimiter)
+    .map((header) =>
+      header.replace(/^["']|["']$/g, "").trim()
+    );
+
+  const rows = lines.slice(1).map((line) => {
+    const cells = line
       .split(delimiter)
-      .map((header) =>
-        header
-          .replace(
-            /^["']|["']$/g,
-            ""
-          )
-          .trim()
+      .map((cell) =>
+        cell.replace(/^["']|["']$/g, "").trim()
       );
 
-  const rows =
-    lines
-      .slice(1)
-      .map((line) => {
-        const cells =
-          line
-            .split(delimiter)
-            .map((cell) =>
-              cell
-                .replace(
-                  /^["']|["']$/g,
-                  ""
-                )
-                .trim()
-            );
+    return Object.fromEntries(
+      headers.map((header, index) => [
+        header,
+        cells[index] ?? "",
+      ])
+    );
+  });
 
-        return Object.fromEntries(
-          headers.map(
-            (header, index) => [
-              header,
-              cells[index] ?? "",
-            ]
-          )
-        );
-      });
-
-  return parseStructuredRows(
-    rows
-  );
+  return parseStructuredRows(rows);
 }
