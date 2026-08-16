@@ -146,6 +146,21 @@ export default function GiftCardDashboard({
     window.setTimeout(() => setMessage(""), 1400);
   }
 
+  function copyGiftCard(card: GiftCard) {
+    const packet = [
+      "Gift Card",
+      `Code: ${card.code}`,
+      `PIN: ${card.pin}`,
+      `Value: ${Number(card.value).toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      })} ${card.currency}`,
+    ].join("\n");
+
+    navigator.clipboard.writeText(packet);
+    setMessage("Gift card details copied");
+    window.setTimeout(() => setMessage(""), 1400);
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -267,8 +282,8 @@ export default function GiftCardDashboard({
                           {!isUsed && (
                             <button
                               className="icon-btn"
-                              title="Copy code"
-                              onClick={() => copy(card.code)}
+                              title="Copy code, PIN and value"
+                              onClick={() => copyGiftCard(card)}
                             >
                               <Clipboard size={15} />
                             </button>
@@ -293,15 +308,6 @@ export default function GiftCardDashboard({
                             >
                               {visiblePins[card.id] ? <EyeOff size={15} /> : <Eye size={15} />}
                             </button>
-                            {visiblePins[card.id] && (
-                              <button
-                                className="icon-btn"
-                                title="Copy PIN"
-                                onClick={() => copy(card.pin)}
-                              >
-                                <Clipboard size={15} />
-                              </button>
-                            )}
                           </div>
                         )}
                       </td>
