@@ -6,6 +6,7 @@ import { Mail } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const supabase = createClient();
+
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -13,12 +14,13 @@ export default function ForgotPasswordPage() {
 
   async function sendReset(e: React.FormEvent) {
     e.preventDefault();
+
     setLoading(true);
     setMessage("");
     setError("");
 
-const redirectTo =
-  "https://gift-card-manager-sooty.vercel.app/reset-password";
+    const redirectTo =
+      "https://gift-card-manager-sooty.vercel.app/reset-password";
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
@@ -37,9 +39,14 @@ const redirectTo =
   return (
     <main className="login-shell">
       <section className="login-card">
-        <div className="brand-mark"><Mail size={25} /></div>
+        <div className="brand-mark">
+          <Mail size={25} />
+        </div>
+
         <p className="eyebrow">INTERNAL TOOL</p>
+
         <h1>Reset password</h1>
+
         <p className="muted">
           We will send a password reset link to your email address.
         </p>
@@ -61,10 +68,17 @@ const redirectTo =
           {error && <div className="error-box">{error}</div>}
 
           <div className="login-actions">
-            <button className="primary full" disabled={loading}>
+            <button
+              className="primary full"
+              disabled={loading}
+            >
               {loading ? "Sending…" : "Send reset link"}
             </button>
-            <a className="login-forgot" href="/login">
+
+            <a
+              className="login-forgot"
+              href="/login"
+            >
               Back to sign in
             </a>
           </div>
