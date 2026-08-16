@@ -9,17 +9,14 @@ import {
   EyeOff,
   FileSpreadsheet,
   Gift,
-  LayoutDashboard,
   LogOut,
   Pencil,
   Plus,
   Search,
-  Settings,
   Trash2,
   Upload,
   Users,
   X,
-  Archive,
   FileText,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -54,6 +51,7 @@ type ParsedCard = {
 };
 
 const supabase = createClient();
+
 const BALANCE_CHECK_URL =
   "https://wwws-uk2.givex.com/merchant_balcheck/300000171_en/";
 
@@ -65,6 +63,7 @@ const STATUS_PRIORITY: Record<ViewStatus, number> = {
 
 function effectiveBalance(card: GiftCard) {
   if (card.status === "used") return 0;
+
   return card.remaining_balance == null
     ? Number(card.value)
     : Number(card.remaining_balance);
@@ -87,6 +86,17 @@ function formatMoney(value: number) {
   });
 }
 
+function displayNameFromEmail(email: string) {
+  const local = email.split("@")[0] || email;
+
+  const parts = local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
+
+  return parts.join(" ") || email;
+}
+
 export default function GiftCardDashboard({
   userEmail,
 }: {
@@ -103,6 +113,8 @@ export default function GiftCardDashboard({
   const [visiblePins, setVisiblePins] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState("");
   const [role, setRole] = useState<Role>("user");
+
+  const userName = useMemo(() => displayNameFromEmail(userEmail), [userEmail]);
 
   async function loadCards() {
     setLoading(true);
@@ -129,6 +141,7 @@ export default function GiftCardDashboard({
       .order("created_at", { ascending: false });
 
     if (error) setMessage(error.message);
+
     setCards((data as GiftCard[]) ?? []);
     setLoading(false);
   }
@@ -143,7 +156,9 @@ export default function GiftCardDashboard({
     return cards
       .filter((card) => {
         const status = effectiveStatus(card);
-        const matchesFilter = filter === "all" || status === filter;
+
+        const matchesFilter =
+          filter === "all" || status === filter;
 
         const matchesQuery =
           !q ||
@@ -172,15 +187,15 @@ export default function GiftCardDashboard({
   }, [cards, query, filter]);
 
   const available = cards.filter(
-    (c) => effectiveStatus(c) === "available"
+    (card) => effectiveStatus(card) === "available"
   ).length;
 
   const partial = cards.filter(
-    (c) => effectiveStatus(c) === "partial"
+    (card) => effectiveStatus(card) === "partial"
   ).length;
 
   const used = cards.filter(
-    (c) => effectiveStatus(c) === "used"
+    (card) => effectiveStatus(card) === "used"
   ).length;
 
   const valuesByCurrency = useMemo(() => {
@@ -188,12 +203,16 @@ export default function GiftCardDashboard({
 
     for (const card of cards) {
       const balance = effectiveBalance(card);
+
       if (balance <= 0) continue;
 
-      map[card.currency] = (map[card.currency] ?? 0) + balance;
+      map[card.currency] =
+        (map[card.currency] ?? 0) + balance;
     }
 
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+    return Object.entries(map).sort(([a], [b]) =>
+      a.localeCompare(b)
+    );
   }, [cards]);
 
   async function logout() {
@@ -255,92 +274,79 @@ export default function GiftCardDashboard({
   }
 
   return (
-    <main className="lean-shell">
-      <aside className="lean-sidebar">
-        <div className="lean-brand">on</div>
+    <main className="clean-shell">
+      <section className="clean-content">
+        <header className="clean-header">
+          <div className="clean-header-left">
+            <img
+              src="/on-logo-black.svg"
+              alt="On"
+              className="clean-logo"
+            />
 
-        <nav className="lean-nav">
-          <a className="active" href="/">
-            <LayoutDashboard size={18} />
-            <span>Dashboard</span>
-          </a>
-
-          <a href="#gift-cards">
-            <Gift size={18} />
-            <span>Gift cards</span>
-          </a>
-
-          <a href="#gift-cards">
-            <Archive size={18} />
-            <span>Batches</span>
-          </a>
-
-          {role === "admin" && (
-            <>
-              <a href="/admin/audit">
-                <FileText size={18} />
-                <span>Audit log</span>
-              </a>
-
-              <a href="/admin/users">
-                <Users size={18} />
-                <span>Users</span>
-              </a>
-
-              <a href="/admin/users">
-                <Settings size={18} />
-                <span>Settings</span>
-              </a>
-            </>
-          )}
-        </nav>
-
-        <div className="lean-profile">
-          <div className="lean-avatar">
-            {userEmail.slice(0, 1).toUpperCase()}
-          </div>
-          <div>
-            <strong>{userEmail.split("@")[0]}</strong>
-            <small>{role === "admin" ? "Admin" : "User"}</small>
-          </div>
-        </div>
-      </aside>
-
-      <section className="lean-content">
-        <header className="lean-header">
-          <div>
-            <p className="eyebrow">GIFT CARD MANAGEMENT · INTERNAL</p>
-            <h1>Dashboard</h1>
+            <div>
+              <p className="eyebrow">
+                GIFT CARD MANAGEMENT · INTERNAL
+              </p>
+              <h1>Dashboard</h1>
+            </div>
           </div>
 
-          <div className="lean-header-actions">
-            <span className="lean-user-meta">
-              {userEmail} · {role}
-            </span>
+          <div className="clean-header-right">
+            <div className="clean-user-card">
+              <div className="clean-avatar">
+                {userName
+                  .split(" ")
+                  .map((part) => part.charAt(0))
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
 
-            {role === "admin" && (
-              <>
-                <a className="lean-icon-button" href="/admin/users" title="Users">
-                  <Users size={17} />
-                </a>
-                <a className="lean-icon-button" href="/admin/audit" title="Audit log">
-                  <FileText size={17} />
-                </a>
-              </>
-            )}
+              <div className="clean-user-text">
+                <strong>{userName}</strong>
+                <span>{userEmail}</span>
+              </div>
+            </div>
 
-            <button className="lean-signout" onClick={logout}>
-              <LogOut size={17} />
-              <span>Sign out</span>
-            </button>
+            <div className="clean-header-actions">
+              {role === "admin" && (
+                <>
+                  <a
+                    className="clean-icon-button"
+                    href="/admin/users"
+                    title="Users"
+                  >
+                    <Users size={17} />
+                  </a>
+
+                  <a
+                    className="clean-icon-button"
+                    href="/admin/audit"
+                    title="Audit log"
+                  >
+                    <FileText size={17} />
+                  </a>
+                </>
+              )}
+
+              <button
+                className="clean-signout"
+                onClick={logout}
+              >
+                <LogOut size={17} />
+                Sign out
+              </button>
+            </div>
           </div>
         </header>
 
-        <section className="lean-stats">
-          <article className="lean-stat available-stat">
-            <div className="lean-stat-icon">
-              <Gift size={21} />
+        <section className="clean-stats">
+          <article className="clean-stat available-stat">
+            <div className="clean-stat-icon">
+              <Gift size={22} />
             </div>
+
             <div>
               <span>Available cards</span>
               <strong>{available}</strong>
@@ -348,8 +354,11 @@ export default function GiftCardDashboard({
             </div>
           </article>
 
-          <article className="lean-stat partial-stat">
-            <div className="lean-stat-icon">◔</div>
+          <article className="clean-stat partial-stat">
+            <div className="clean-stat-icon">
+              ◔
+            </div>
+
             <div>
               <span>Partially used</span>
               <strong>{partial}</strong>
@@ -357,10 +366,11 @@ export default function GiftCardDashboard({
             </div>
           </article>
 
-          <article className="lean-stat used-stat">
-            <div className="lean-stat-icon">
-              <CheckCircle2 size={21} />
+          <article className="clean-stat used-stat">
+            <div className="clean-stat-icon">
+              <CheckCircle2 size={22} />
             </div>
+
             <div>
               <span>Used cards</span>
               <strong>{used}</strong>
@@ -368,50 +378,71 @@ export default function GiftCardDashboard({
             </div>
           </article>
 
-          <article className="lean-value-card">
-            <div className="lean-value-title">
-              Available value <span>(latest balances)</span>
+          <article className="clean-value-card">
+            <div className="clean-value-title">
+              Available value{" "}
+              <span>(latest balances)</span>
             </div>
 
-            <div className="lean-currency-values">
+            <div className="clean-currency-values">
               {valuesByCurrency.length === 0 ? (
                 <strong>—</strong>
               ) : (
                 valuesByCurrency.map(([currency, amount]) => (
                   <div key={currency}>
-                    <strong>{formatMoney(amount)}</strong>
+                    <strong>
+                      {formatMoney(amount)}
+                    </strong>
                     <span>{currency}</span>
                   </div>
                 ))
               )}
             </div>
 
-            <small>Values are kept separate by currency</small>
+            <small>
+              Values are kept separate by currency
+            </small>
           </article>
         </section>
 
-        <section className="lean-toolbar">
-          <div className="lean-search">
+        <section className="clean-toolbar">
+          <div className="clean-search">
             <Search size={18} />
+
             <input
               placeholder="Search code, recipient, batch..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(event) =>
+                setQuery(event.target.value)
+              }
             />
           </div>
 
-          <div className="lean-filters">
-            {(["all", "available", "partial", "used"] as const).map((f) => (
+          <div className="clean-filters">
+            {(
+              [
+                "all",
+                "available",
+                "partial",
+                "used",
+              ] as const
+            ).map((currentFilter) => (
               <button
-                key={f}
-                className={filter === f ? "active" : ""}
-                onClick={() => setFilter(f)}
+                key={currentFilter}
+                className={
+                  filter === currentFilter
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setFilter(currentFilter)
+                }
               >
-                {f === "all"
+                {currentFilter === "all"
                   ? "All"
-                  : f === "available"
+                  : currentFilter === "available"
                   ? "Available"
-                  : f === "partial"
+                  : currentFilter === "partial"
                   ? "Partially used"
                   : "Used"}
               </button>
@@ -419,31 +450,33 @@ export default function GiftCardDashboard({
           </div>
 
           {role === "admin" && (
-            <button className="lean-add" onClick={() => setShowUpload(true)}>
+            <button
+              className="clean-add"
+              onClick={() => setShowUpload(true)}
+            >
               <Plus size={18} />
               Add gift card
             </button>
           )}
         </section>
 
-        {message && <div className="notice">{message}</div>}
+        {message && (
+          <div className="notice">{message}</div>
+        )}
 
-        <section className="lean-table-card" id="gift-cards">
+        <section className="clean-table-card">
           {loading ? (
-            <div className="empty">Loading gift cards…</div>
+            <div className="empty">
+              Loading gift cards…
+            </div>
           ) : filtered.length === 0 ? (
             <div className="empty">
               <Gift size={30} />
               <strong>No gift cards found</strong>
-              <span>
-                {role === "admin"
-                  ? "Add a batch or change the current filter."
-                  : "No cards are available in the current view."}
-              </span>
             </div>
           ) : (
-            <div className="table-wrap responsive-gift-table lean-table-wrap">
-              <table className="lean-table">
+            <div className="table-wrap clean-table-wrap">
+              <table className="clean-table">
                 <thead>
                   <tr>
                     <th>Status</th>
@@ -462,9 +495,14 @@ export default function GiftCardDashboard({
 
                 <tbody>
                   {filtered.map((card) => {
-                    const viewStatus = effectiveStatus(card);
-                    const isUsed = viewStatus === "used";
-                    const remaining = effectiveBalance(card);
+                    const viewStatus =
+                      effectiveStatus(card);
+
+                    const isUsed =
+                      viewStatus === "used";
+
+                    const remaining =
+                      effectiveBalance(card);
 
                     return (
                       <tr
@@ -472,16 +510,20 @@ export default function GiftCardDashboard({
                         className={
                           viewStatus === "used"
                             ? "used-row"
-                            : viewStatus === "partial"
+                            : viewStatus ===
+                              "partial"
                             ? "partial-row"
                             : ""
                         }
                       >
                         <td data-label="Status">
-                          <span className={`status ${viewStatus}`}>
+                          <span
+                            className={`status ${viewStatus}`}
+                          >
                             {viewStatus === "used"
                               ? "Used"
-                              : viewStatus === "partial"
+                              : viewStatus ===
+                                "partial"
                               ? "Partially used"
                               : "Available"}
                           </span>
@@ -495,7 +537,9 @@ export default function GiftCardDashboard({
                               <button
                                 className="icon-btn"
                                 title="Copy code, PIN and value"
-                                onClick={() => copyGiftCard(card)}
+                                onClick={() =>
+                                  copyGiftCard(card)
+                                }
                               >
                                 <Clipboard size={14} />
                               </button>
@@ -505,25 +549,38 @@ export default function GiftCardDashboard({
 
                         <td data-label="PIN">
                           {isUsed ? (
-                            <code className="used-secret">••••</code>
+                            <code className="used-secret">
+                              ••••
+                            </code>
                           ) : (
                             <div className="secret-row">
                               <code>
-                                {visiblePins[card.id] ? card.pin : "••••"}
+                                {visiblePins[card.id]
+                                  ? card.pin
+                                  : "••••"}
                               </code>
 
                               <button
                                 className="icon-btn"
                                 title="Show or hide PIN"
                                 onClick={() =>
-                                  setVisiblePins((s) => ({
-                                    ...s,
-                                    [card.id]: !s[card.id],
-                                  }))
+                                  setVisiblePins(
+                                    (state) => ({
+                                      ...state,
+                                      [card.id]:
+                                        !state[
+                                          card.id
+                                        ],
+                                    })
+                                  )
                                 }
                               >
-                                {visiblePins[card.id] ? (
-                                  <EyeOff size={14} />
+                                {visiblePins[
+                                  card.id
+                                ] ? (
+                                  <EyeOff
+                                    size={14}
+                                  />
                                 ) : (
                                   <Eye size={14} />
                                 )}
@@ -533,31 +590,52 @@ export default function GiftCardDashboard({
                         </td>
 
                         <td data-label="Original">
-                          {formatMoney(Number(card.value))}
+                          {formatMoney(
+                            Number(card.value)
+                          )}
                         </td>
 
                         <td data-label="Remaining">
-                          <strong className={`balance-value ${viewStatus}`}>
-                            {formatMoney(remaining)}
+                          <strong
+                            className={`balance-value ${viewStatus}`}
+                          >
+                            {formatMoney(
+                              remaining
+                            )}
                           </strong>
                         </td>
 
-                        <td data-label="Currency">{card.currency}</td>
+                        <td data-label="Currency">
+                          {card.currency}
+                        </td>
 
-                        <td data-label="Batch">{card.batch_label || "—"}</td>
+                        <td data-label="Batch">
+                          {card.batch_label || "—"}
+                        </td>
 
                         <td data-label="Recipient / Vendor">
-                          <div>{card.recipient || "—"}</div>
-                          {card.note && <small>{card.note}</small>}
+                          <div>
+                            {card.recipient || "—"}
+                          </div>
+
+                          {card.note && (
+                            <small>
+                              {card.note}
+                            </small>
+                          )}
                         </td>
 
                         <td data-label="Last check">
                           {card.last_balance_check
-                            ? new Date(card.last_balance_check).toLocaleString(
+                            ? new Date(
+                                card.last_balance_check
+                              ).toLocaleString(
                                 undefined,
                                 {
-                                  dateStyle: "medium",
-                                  timeStyle: "short",
+                                  dateStyle:
+                                    "medium",
+                                  timeStyle:
+                                    "short",
                                 }
                               )
                             : "—"}
@@ -565,52 +643,88 @@ export default function GiftCardDashboard({
 
                         <td data-label="Used">
                           {card.used_at
-                            ? new Date(card.used_at).toLocaleString(undefined, {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })
+                            ? new Date(
+                                card.used_at
+                              ).toLocaleString(
+                                undefined,
+                                {
+                                  dateStyle:
+                                    "medium",
+                                  timeStyle:
+                                    "short",
+                                }
+                              )
                             : "—"}
                         </td>
 
-                        <td data-label="Actions" className="actions">
-                          <div className="lean-actions">
+                        <td
+                          data-label="Actions"
+                          className="actions"
+                        >
+                          <div className="clean-actions">
                             {!isUsed ? (
                               <button
-                                className="lean-check-button"
+                                className="clean-check-button"
                                 title="Check balance"
-                                onClick={() => setBalanceCard(card)}
+                                onClick={() =>
+                                  setBalanceCard(
+                                    card
+                                  )
+                                }
                               >
-                                <span>Check</span>
-                                <ExternalLink size={13} />
+                                Check
+                                <ExternalLink
+                                  size={13}
+                                />
                               </button>
-                            ) : role === "admin" ? (
+                            ) : role ===
+                              "admin" ? (
                               <button
-                                className="lean-restore"
-                                onClick={() => restore(card)}
+                                className="clean-restore"
+                                onClick={() =>
+                                  restore(card)
+                                }
                               >
                                 Restore
                               </button>
                             ) : (
-                              <span className="used-lock">Used</span>
+                              <span className="used-lock">
+                                Used
+                              </span>
                             )}
 
-                            {role === "admin" && !isUsed && (
-                              <button
-                                className="lean-icon-action"
-                                title="Edit gift card"
-                                onClick={() => setEditCard(card)}
-                              >
-                                <Pencil size={14} />
-                              </button>
-                            )}
+                            {role ===
+                              "admin" &&
+                              !isUsed && (
+                                <button
+                                  className="clean-icon-action"
+                                  title="Edit gift card"
+                                  onClick={() =>
+                                    setEditCard(
+                                      card
+                                    )
+                                  }
+                                >
+                                  <Pencil
+                                    size={14}
+                                  />
+                                </button>
+                              )}
 
-                            {role === "admin" && (
+                            {role ===
+                              "admin" && (
                               <button
-                                className="lean-icon-action"
+                                className="clean-icon-action"
                                 title="Delete gift card"
-                                onClick={() => deleteCard(card)}
+                                onClick={() =>
+                                  deleteCard(
+                                    card
+                                  )
+                                }
                               >
-                                <Trash2 size={14} />
+                                <Trash2
+                                  size={14}
+                                />
                               </button>
                             )}
                           </div>
@@ -665,8 +779,13 @@ export default function GiftCardDashboard({
           onSaved={async () => {
             setBalanceCard(null);
             await loadCards();
+
             setMessage("Balance updated");
-            window.setTimeout(() => setMessage(""), 1400);
+
+            window.setTimeout(
+              () => setMessage(""),
+              1400
+            );
           }}
         />
       )}
@@ -686,12 +805,20 @@ function BalanceCheckModal({
   const [remaining, setRemaining] = useState(
     String(effectiveBalance(card))
   );
+
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function openBalanceCheck() {
-    await navigator.clipboard.writeText(card.code);
-    window.open(BALANCE_CHECK_URL, "_blank", "noopener,noreferrer");
+    await navigator.clipboard.writeText(
+      card.code
+    );
+
+    window.open(
+      BALANCE_CHECK_URL,
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
   async function saveBalance() {
@@ -701,7 +828,9 @@ function BalanceCheckModal({
     const original = Number(card.value);
 
     if (Number.isNaN(value) || value < 0) {
-      return setError("Enter a valid remaining balance.");
+      return setError(
+        "Enter a valid remaining balance."
+      );
     }
 
     if (value > original) {
@@ -714,12 +843,15 @@ function BalanceCheckModal({
 
     const updates: Record<string, unknown> = {
       remaining_balance: value,
-      last_balance_check: new Date().toISOString(),
+      last_balance_check:
+        new Date().toISOString(),
     };
 
     if (value === 0) {
       updates.status = "used";
-      updates.used_at = card.used_at ?? new Date().toISOString();
+      updates.used_at =
+        card.used_at ??
+        new Date().toISOString();
     }
 
     const { error } = await supabase
@@ -729,7 +861,9 @@ function BalanceCheckModal({
 
     setSaving(false);
 
-    if (error) return setError(error.message);
+    if (error) {
+      return setError(error.message);
+    }
 
     onSaved();
   }
@@ -737,16 +871,22 @@ function BalanceCheckModal({
   return (
     <div className="modal-backdrop">
       <section className="modal balance-modal">
-        <button className="modal-close" onClick={onClose}>
+        <button
+          className="modal-close"
+          onClick={onClose}
+        >
           <X size={20} />
         </button>
 
-        <p className="eyebrow">BALANCE CHECK</p>
+        <p className="eyebrow">
+          BALANCE CHECK
+        </p>
+
         <h2>Check gift card balance</h2>
 
         <p className="muted">
-          Only the gift card code is required. The code will be copied
-          automatically.
+          Only the gift card code is required.
+          The code will be copied automatically.
         </p>
 
         <div className="card-summary">
@@ -758,19 +898,27 @@ function BalanceCheckModal({
           <div>
             <span>Original value</span>
             <strong>
-              {formatMoney(Number(card.value))} {card.currency}
+              {formatMoney(
+                Number(card.value)
+              )}{" "}
+              {card.currency}
             </strong>
           </div>
         </div>
 
-        <button className="primary full" onClick={openBalanceCheck}>
+        <button
+          className="primary full"
+          onClick={openBalanceCheck}
+        >
           <ExternalLink size={17} />
           Open official balance check
         </button>
 
         <div className="balance-help">
-          Complete the “I’m not a robot” check on the external page, enter
-          the copied code, then return here and save the displayed balance.
+          Complete the “I’m not a robot”
+          check on the external page, enter the
+          copied code, then return here and save
+          the displayed balance.
         </div>
 
         <label>
@@ -783,16 +931,28 @@ function BalanceCheckModal({
               max={card.value}
               step="0.01"
               value={remaining}
-              onChange={(e) => setRemaining(e.target.value)}
+              onChange={(event) =>
+                setRemaining(
+                  event.target.value
+                )
+              }
             />
+
             <span>{card.currency}</span>
           </div>
         </label>
 
-        {error && <div className="error-box">{error}</div>}
+        {error && (
+          <div className="error-box">
+            {error}
+          </div>
+        )}
 
         <div className="modal-actions">
-          <button className="ghost" onClick={onClose}>
+          <button
+            className="ghost"
+            onClick={onClose}
+          >
             Cancel
           </button>
 
@@ -801,7 +961,9 @@ function BalanceCheckModal({
             onClick={saveBalance}
             disabled={saving}
           >
-            {saving ? "Saving…" : "Save balance"}
+            {saving
+              ? "Saving…"
+              : "Save balance"}
           </button>
         </div>
       </section>
@@ -817,17 +979,41 @@ function UploadModal({
   onSaved: () => void;
 }) {
   const [raw, setRaw] = useState("");
-  const [fileCards, setFileCards] = useState<ParsedCard[]>([]);
-  const [fileName, setFileName] = useState("");
-  const [value, setValue] = useState("750");
-  const [currency, setCurrency] = useState("CHF");
-  const [batch, setBatch] = useState("");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [mode, setMode] = useState<"paste" | "file">("paste");
+  const [fileCards, setFileCards] = useState<
+    ParsedCard[]
+  >([]);
 
-  const pastedCards = useMemo(() => parseGiftCards(raw), [raw]);
-  const parsed = mode === "paste" ? pastedCards : fileCards;
+  const [fileName, setFileName] =
+    useState("");
+
+  const [value, setValue] =
+    useState("750");
+
+  const [currency, setCurrency] =
+    useState("CHF");
+
+  const [batch, setBatch] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [mode, setMode] = useState<
+    "paste" | "file"
+  >("paste");
+
+  const pastedCards = useMemo(
+    () => parseGiftCards(raw),
+    [raw]
+  );
+
+  const parsed =
+    mode === "paste"
+      ? pastedCards
+      : fileCards;
 
   async function importFile(file?: File) {
     if (!file) return;
@@ -836,39 +1022,74 @@ function UploadModal({
     setFileName(file.name);
 
     try {
-      const lower = file.name.toLowerCase();
+      const lower =
+        file.name.toLowerCase();
 
-      if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer);
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (
+        lower.endsWith(".xlsx") ||
+        lower.endsWith(".xls")
+      ) {
+        const buffer =
+          await file.arrayBuffer();
 
-        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-          defval: "",
-          raw: false,
-        });
+        const workbook =
+          XLSX.read(buffer);
 
-        const cards = parseStructuredRows(rows);
+        const sheet =
+          workbook.Sheets[
+            workbook.SheetNames[0]
+          ];
+
+        const rows =
+          XLSX.utils.sheet_to_json<
+            Record<string, unknown>
+          >(sheet, {
+            defval: "",
+            raw: false,
+          });
+
+        const cards =
+          parseStructuredRows(rows);
+
         setFileCards(cards);
 
         if (!cards.length) {
-          setError("No valid rows found. Use columns named code and pin.");
+          setError(
+            "No valid rows found. Use columns named code and pin."
+          );
         }
 
         return;
       }
 
-      const text = await file.text();
-      const structured = parseCsvOrDelimited(text);
-      const fallback = parseGiftCards(text);
+      const text =
+        await file.text();
 
-      setFileCards(structured.length ? structured : fallback);
+      const structured =
+        parseCsvOrDelimited(text);
 
-      if (!(structured.length || fallback.length)) {
-        setError("No valid code / PIN pairs found in the file.");
+      const fallback =
+        parseGiftCards(text);
+
+      setFileCards(
+        structured.length
+          ? structured
+          : fallback
+      );
+
+      if (
+        !(
+          structured.length ||
+          fallback.length
+        )
+      ) {
+        setError(
+          "No valid code / PIN pairs found in the file."
+        );
       }
     } catch {
       setFileCards([]);
+
       setError(
         "The file could not be read. Please use CSV, XLSX, XLS or TXT."
       );
@@ -878,44 +1099,90 @@ function UploadModal({
   async function save() {
     setError("");
 
-    if (!parsed.length) return setError("No valid gift cards detected.");
+    if (!parsed.length) {
+      return setError(
+        "No valid gift cards detected."
+      );
+    }
 
-    const defaultValue = Number(value);
+    const defaultValue =
+      Number(value);
 
-    if ((!defaultValue || defaultValue <= 0) && parsed.some((c) => !c.value)) {
-      return setError("Enter a valid default value per card.");
+    if (
+      (!defaultValue ||
+        defaultValue <= 0) &&
+      parsed.some(
+        (card) => !card.value
+      )
+    ) {
+      return setError(
+        "Enter a valid default value per card."
+      );
     }
 
     if (
-      !/^[A-Za-z]{3}$/.test(currency) &&
-      parsed.some((c) => !c.currency)
+      !/^[A-Za-z]{3}$/.test(
+        currency
+      ) &&
+      parsed.some(
+        (card) => !card.currency
+      )
     ) {
       return setError(
         "Currency must be a 3-letter code such as CHF, EUR or GBP."
       );
     }
 
-    const normalizedRows = parsed.map((card) => {
-      const cardValue = Number(card.value ?? defaultValue);
+    const normalizedRows =
+      parsed.map((card) => {
+        const cardValue =
+          Number(
+            card.value ??
+              defaultValue
+          );
 
-      return {
-        code: card.code.trim(),
-        pin: card.pin.trim(),
-        value: cardValue,
-        currency: String(card.currency ?? currency)
-          .toUpperCase()
-          .trim(),
-        batch_label: (card.batch ?? batch).trim() || null,
-        status: "available" as const,
-        remaining_balance: cardValue,
-      };
-    });
+        return {
+          code: card.code.trim(),
+          pin: card.pin.trim(),
+          value: cardValue,
+          currency: String(
+            card.currency ??
+              currency
+          )
+            .toUpperCase()
+            .trim(),
+          batch_label:
+            (
+              card.batch ??
+              batch
+            ).trim() || null,
+          status:
+            "available" as const,
+          remaining_balance:
+            cardValue,
+        };
+      });
 
-    if (normalizedRows.some((r) => !r.value || r.value <= 0)) {
-      return setError("Every card requires a value greater than zero.");
+    if (
+      normalizedRows.some(
+        (row) =>
+          !row.value ||
+          row.value <= 0
+      )
+    ) {
+      return setError(
+        "Every card requires a value greater than zero."
+      );
     }
 
-    if (normalizedRows.some((r) => !/^[A-Z]{3}$/.test(r.currency))) {
+    if (
+      normalizedRows.some(
+        (row) =>
+          !/^[A-Z]{3}$/.test(
+            row.currency
+          )
+      )
+    ) {
       return setError(
         "Every card requires a valid 3-letter currency."
       );
@@ -923,14 +1190,17 @@ function UploadModal({
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from("gift_cards")
-      .insert(normalizedRows);
+    const { error } =
+      await supabase
+        .from("gift_cards")
+        .insert(normalizedRows);
 
     setSaving(false);
 
     if (error) {
-      if (error.code === "23505") {
+      if (
+        error.code === "23505"
+      ) {
         setError(
           "At least one gift card code already exists. Nothing was imported."
         );
@@ -947,72 +1217,117 @@ function UploadModal({
   return (
     <div className="modal-backdrop">
       <section className="modal large-modal">
-        <button className="modal-close" onClick={onClose}>
+        <button
+          className="modal-close"
+          onClick={onClose}
+        >
           <X size={20} />
         </button>
 
-        <p className="eyebrow">NEW BATCH</p>
+        <p className="eyebrow">
+          NEW BATCH
+        </p>
+
         <h2>Add gift cards</h2>
 
         <p className="muted">
-          Paste code and PIN pairs directly, or upload CSV / Excel.
+          Paste code and PIN pairs directly,
+          or upload CSV / Excel.
         </p>
 
         <div className="import-tabs">
           <button
-            className={mode === "paste" ? "active" : ""}
-            onClick={() => setMode("paste")}
+            className={
+              mode === "paste"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setMode("paste")
+            }
           >
-            <Clipboard size={16} /> Paste codes
+            <Clipboard size={16} />
+            Paste codes
           </button>
 
           <button
-            className={mode === "file" ? "active" : ""}
-            onClick={() => setMode("file")}
+            className={
+              mode === "file"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setMode("file")
+            }
           >
-            <FileSpreadsheet size={16} /> CSV / Excel
+            <FileSpreadsheet
+              size={16}
+            />
+            CSV / Excel
           </button>
         </div>
 
         <div className="two-col">
           <label>
             Default value per card
+
             <input
               type="number"
               min="0"
               step="0.01"
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(event) =>
+                setValue(
+                  event.target.value
+                )
+              }
             />
           </label>
 
           <label>
             Default currency
+
             <input
               maxLength={3}
               value={currency}
-              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+              onChange={(event) =>
+                setCurrency(
+                  event.target.value.toUpperCase()
+                )
+              }
               placeholder="CHF"
             />
           </label>
         </div>
 
         <label>
-          Batch name <span className="optional">(optional)</span>
+          Batch name{" "}
+          <span className="optional">
+            (optional)
+          </span>
+
           <input
             value={batch}
-            onChange={(e) => setBatch(e.target.value)}
-            placeholder="e.g. Supplier gifts · August 2026"
+            onChange={(event) =>
+              setBatch(
+                event.target.value
+              )
+            }
           />
         </label>
 
         {mode === "paste" ? (
           <label>
             Codes and PINs
+
             <textarea
               rows={9}
               value={raw}
-              onChange={(e) => setRaw(e.target.value)}
+              onChange={(event) =>
+                setRaw(
+                  event.target.value
+                )
+              }
               placeholder={
                 "638889001467108225188    2717\n638889001595108225194    2412"
               }
@@ -1021,45 +1336,66 @@ function UploadModal({
         ) : (
           <div className="file-drop">
             <label className="file-button file-button-large">
-              <Upload size={18} /> Choose CSV / Excel file
+              <Upload size={18} />
+              Choose CSV / Excel file
+
               <input
                 hidden
                 type="file"
                 accept=".csv,.txt,.xlsx,.xls"
-                onChange={(e) => importFile(e.target.files?.[0])}
+                onChange={(event) =>
+                  importFile(
+                    event.target
+                      .files?.[0]
+                  )
+                }
               />
             </label>
 
-            <span>{fileName || "No file selected"}</span>
-
-            <small>
-              Recommended columns: <code>code</code>, <code>pin</code>,{" "}
-              <code>value</code>, <code>currency</code>, <code>batch</code>.
-            </small>
+            <span>
+              {fileName ||
+                "No file selected"}
+            </span>
           </div>
         )}
 
         <div className="import-summary">
           <strong>
-            {parsed.length} valid card{parsed.length === 1 ? "" : "s"} detected
+            {parsed.length} valid card
+            {parsed.length === 1
+              ? ""
+              : "s"}{" "}
+            detected
           </strong>
         </div>
 
-        {error && <div className="error-box">{error}</div>}
+        {error && (
+          <div className="error-box">
+            {error}
+          </div>
+        )}
 
         <div className="modal-actions">
-          <button className="ghost" onClick={onClose}>
+          <button
+            className="ghost"
+            onClick={onClose}
+          >
             Cancel
           </button>
 
           <button
             className="primary"
             onClick={save}
-            disabled={saving || !parsed.length}
+            disabled={
+              saving ||
+              !parsed.length
+            }
           >
             {saving
               ? "Importing…"
-              : `Import ${parsed.length || ""} gift cards`}
+              : `Import ${
+                  parsed.length || ""
+                } gift cards`}
           </button>
         </div>
       </section>
@@ -1078,34 +1414,54 @@ function UseModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [recipient, setRecipient] = useState("");
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [recipient, setRecipient] =
+    useState("");
+
+  const [note, setNote] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
 
   async function save() {
     if (!recipient.trim()) {
-      return setError("Please enter the recipient or vendor.");
+      return setError(
+        "Please enter the recipient or vendor."
+      );
     }
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from("gift_cards")
-      .update({
-        status: "used",
-        recipient: recipient.trim(),
-        note: note.trim() || null,
-        used_at: new Date().toISOString(),
-        used_by: userEmail,
-        remaining_balance: 0,
-      })
-      .eq("id", card.id)
-      .eq("status", "available");
+    const { error } =
+      await supabase
+        .from("gift_cards")
+        .update({
+          status: "used",
+          recipient:
+            recipient.trim(),
+          note:
+            note.trim() || null,
+          used_at:
+            new Date().toISOString(),
+          used_by: userEmail,
+          remaining_balance: 0,
+        })
+        .eq("id", card.id)
+        .eq(
+          "status",
+          "available"
+        );
 
     setSaving(false);
 
-    if (error) return setError(error.message);
+    if (error) {
+      return setError(
+        error.message
+      );
+    }
 
     onSaved();
   }
@@ -1113,11 +1469,17 @@ function UseModal({
   return (
     <div className="modal-backdrop">
       <section className="modal">
-        <button className="modal-close" onClick={onClose}>
+        <button
+          className="modal-close"
+          onClick={onClose}
+        >
           <X size={20} />
         </button>
 
-        <p className="eyebrow">ISSUE GIFT CARD</p>
+        <p className="eyebrow">
+          ISSUE GIFT CARD
+        </p>
+
         <h2>Mark as used</h2>
 
         <div className="card-summary">
@@ -1129,38 +1491,65 @@ function UseModal({
           <div>
             <span>Value</span>
             <strong>
-              {card.value} {card.currency}
+              {card.value}{" "}
+              {card.currency}
             </strong>
           </div>
         </div>
 
         <label>
           Recipient / vendor
+
           <input
             autoFocus
             value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
+            onChange={(event) =>
+              setRecipient(
+                event.target.value
+              )
+            }
           />
         </label>
 
         <label>
-          Note <span className="optional">(optional)</span>
+          Note{" "}
+          <span className="optional">
+            (optional)
+          </span>
+
           <textarea
             rows={3}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(event) =>
+              setNote(
+                event.target.value
+              )
+            }
           />
         </label>
 
-        {error && <div className="error-box">{error}</div>}
+        {error && (
+          <div className="error-box">
+            {error}
+          </div>
+        )}
 
         <div className="modal-actions">
-          <button className="ghost" onClick={onClose}>
+          <button
+            className="ghost"
+            onClick={onClose}
+          >
             Cancel
           </button>
 
-          <button className="primary" onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Confirm used"}
+          <button
+            className="primary"
+            onClick={save}
+            disabled={saving}
+          >
+            {saving
+              ? "Saving…"
+              : "Confirm used"}
           </button>
         </div>
       </section>
@@ -1177,66 +1566,119 @@ function EditModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [code, setCode] = useState(card.code);
-  const [pin, setPin] = useState(card.pin);
-  const [value, setValue] = useState(String(card.value));
-  const [currency, setCurrency] = useState(card.currency);
-  const [batch, setBatch] = useState(card.batch_label ?? "");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [code, setCode] =
+    useState(card.code);
+
+  const [pin, setPin] =
+    useState(card.pin);
+
+  const [value, setValue] =
+    useState(String(card.value));
+
+  const [currency, setCurrency] =
+    useState(card.currency);
+
+  const [batch, setBatch] =
+    useState(
+      card.batch_label ?? ""
+    );
+
+  const [error, setError] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
 
   async function save() {
     setError("");
 
-    if (!code.trim() || !pin.trim()) {
-      return setError("Code and PIN are required.");
+    if (
+      !code.trim() ||
+      !pin.trim()
+    ) {
+      return setError(
+        "Code and PIN are required."
+      );
     }
 
-    const numericValue = Number(value);
+    const numericValue =
+      Number(value);
 
-    if (!numericValue || numericValue <= 0) {
-      return setError("Enter a valid value greater than zero.");
+    if (
+      !numericValue ||
+      numericValue <= 0
+    ) {
+      return setError(
+        "Enter a valid value greater than zero."
+      );
     }
 
-    const normalizedCurrency = currency.trim().toUpperCase();
+    const normalizedCurrency =
+      currency
+        .trim()
+        .toUpperCase();
 
-    if (!/^[A-Z]{3}$/.test(normalizedCurrency)) {
+    if (
+      !/^[A-Z]{3}$/.test(
+        normalizedCurrency
+      )
+    ) {
       return setError(
         "Currency must be a 3-letter code such as CHF, EUR or GBP."
       );
     }
 
-    const currentRemaining = effectiveBalance(card);
+    const currentRemaining =
+      effectiveBalance(card);
 
     const newRemaining =
-      card.remaining_balance == null ||
-      currentRemaining === Number(card.value)
+      card.remaining_balance ==
+        null ||
+      currentRemaining ===
+        Number(card.value)
         ? numericValue
-        : Math.min(currentRemaining, numericValue);
+        : Math.min(
+            currentRemaining,
+            numericValue
+          );
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from("gift_cards")
-      .update({
-        code: code.trim(),
-        pin: pin.trim(),
-        value: numericValue,
-        currency: normalizedCurrency,
-        batch_label: batch.trim() || null,
-        remaining_balance: newRemaining,
-      })
-      .eq("id", card.id)
-      .eq("status", "available");
+    const { error } =
+      await supabase
+        .from("gift_cards")
+        .update({
+          code: code.trim(),
+          pin: pin.trim(),
+          value: numericValue,
+          currency:
+            normalizedCurrency,
+          batch_label:
+            batch.trim() ||
+            null,
+          remaining_balance:
+            newRemaining,
+        })
+        .eq("id", card.id)
+        .eq(
+          "status",
+          "available"
+        );
 
     setSaving(false);
 
     if (error) {
-      if (error.code === "23505") {
-        return setError("This gift card code already exists.");
+      if (
+        error.code === "23505"
+      ) {
+        return setError(
+          "This gift card code already exists."
+        );
       }
 
-      return setError(error.message);
+      return setError(
+        error.message
+      );
     }
 
     onSaved();
@@ -1245,54 +1687,104 @@ function EditModal({
   return (
     <div className="modal-backdrop">
       <section className="modal">
-        <button className="modal-close" onClick={onClose}>
+        <button
+          className="modal-close"
+          onClick={onClose}
+        >
           <X size={20} />
         </button>
 
-        <p className="eyebrow">ADMIN</p>
+        <p className="eyebrow">
+          ADMIN
+        </p>
+
         <h2>Edit gift card</h2>
 
         <label>
           Code
-          <input value={code} onChange={(e) => setCode(e.target.value)} />
+
+          <input
+            value={code}
+            onChange={(event) =>
+              setCode(
+                event.target.value
+              )
+            }
+          />
         </label>
 
         <label>
           PIN
-          <input value={pin} onChange={(e) => setPin(e.target.value)} />
+
+          <input
+            value={pin}
+            onChange={(event) =>
+              setPin(
+                event.target.value
+              )
+            }
+          />
         </label>
 
         <div className="two-col">
           <label>
             Value
+
             <input
               type="number"
               min="0"
               step="0.01"
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(event) =>
+                setValue(
+                  event.target.value
+                )
+              }
             />
           </label>
 
           <label>
             Currency
+
             <input
               maxLength={3}
               value={currency}
-              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+              onChange={(event) =>
+                setCurrency(
+                  event.target.value.toUpperCase()
+                )
+              }
             />
           </label>
         </div>
 
         <label>
-          Batch <span className="optional">(optional)</span>
-          <input value={batch} onChange={(e) => setBatch(e.target.value)} />
+          Batch{" "}
+          <span className="optional">
+            (optional)
+          </span>
+
+          <input
+            value={batch}
+            onChange={(event) =>
+              setBatch(
+                event.target.value
+              )
+            }
+          />
         </label>
 
-        {error && <div className="error-box">{error}</div>}
+        {error && (
+          <div className="error-box">
+            {error}
+          </div>
+        )}
 
         <div className="modal-actions">
-          <button className="ghost" onClick={onClose}>
+          <button
+            className="ghost"
+            onClick={onClose}
+          >
             Cancel
           </button>
 
@@ -1301,7 +1793,9 @@ function EditModal({
             onClick={save}
             disabled={saving}
           >
-            {saving ? "Saving…" : "Save changes"}
+            {saving
+              ? "Saving…"
+              : "Save changes"}
           </button>
         </div>
       </section>
@@ -1309,47 +1803,80 @@ function EditModal({
   );
 }
 
-function parseGiftCards(input: string): ParsedCard[] {
-  const seen = new Set<string>();
-  const rows: ParsedCard[] = [];
+function parseGiftCards(
+  input: string
+): ParsedCard[] {
+  const seen =
+    new Set<string>();
+
+  const rows: ParsedCard[] =
+    [];
 
   for (const line of input.split(/\r?\n/)) {
-    const trimmed = line.trim();
+    const trimmed =
+      line.trim();
+
     if (!trimmed) continue;
 
-    const match = trimmed.match(
-      /^["']?([A-Za-z0-9_-]{8,})["']?[\s,;]+["']?([A-Za-z0-9_-]{3,12})["']?/
-    );
+    const match =
+      trimmed.match(
+        /^["']?([A-Za-z0-9_-]{8,})["']?[\s,;]+["']?([A-Za-z0-9_-]{3,12})["']?/
+      );
 
     if (!match) continue;
 
     const code = match[1];
     const pin = match[2];
 
-    if (seen.has(code)) continue;
+    if (seen.has(code)) {
+      continue;
+    }
 
     seen.add(code);
-    rows.push({ code, pin });
+
+    rows.push({
+      code,
+      pin,
+    });
   }
 
   return rows;
 }
 
-function normalizeKey(key: string) {
-  return key.toLowerCase().trim().replace(/[\s_-]+/g, "");
+function normalizeKey(
+  key: string
+) {
+  return key
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_-]+/g, "");
 }
 
 function parseStructuredRows(
-  rows: Record<string, unknown>[]
+  rows: Record<
+    string,
+    unknown
+  >[]
 ): ParsedCard[] {
-  const seen = new Set<string>();
-  const output: ParsedCard[] = [];
+  const seen =
+    new Set<string>();
+
+  const output: ParsedCard[] =
+    [];
 
   for (const row of rows) {
-    const normalized: Record<string, unknown> = {};
+    const normalized: Record<
+      string,
+      unknown
+    > = {};
 
-    for (const [key, val] of Object.entries(row)) {
-      normalized[normalizeKey(key)] = val;
+    for (const [
+      key,
+      val,
+    ] of Object.entries(row)) {
+      normalized[
+        normalizeKey(key)
+      ] = val;
     }
 
     const code = String(
@@ -1366,7 +1893,13 @@ function parseStructuredRows(
         ""
     ).trim();
 
-    if (!code || !pin || seen.has(code)) continue;
+    if (
+      !code ||
+      !pin ||
+      seen.has(code)
+    ) {
+      continue;
+    }
 
     const rawValue =
       normalized.value ??
@@ -1374,28 +1907,34 @@ function parseStructuredRows(
       normalized.cardvalue;
 
     const numericValue =
-      rawValue === undefined || rawValue === ""
+      rawValue === undefined ||
+      rawValue === ""
         ? undefined
         : Number(
             String(rawValue)
-              .replace(/[^\d.,-]/g, "")
+              .replace(
+                /[^\d.,-]/g,
+                ""
+              )
               .replace(",", ".")
           );
 
-    const rawCurrency = String(
-      normalized.currency ??
-        normalized.curr ??
-        ""
-    )
-      .trim()
-      .toUpperCase();
+    const rawCurrency =
+      String(
+        normalized.currency ??
+          normalized.curr ??
+          ""
+      )
+        .trim()
+        .toUpperCase();
 
-    const rawBatch = String(
-      normalized.batch ??
-        normalized.batchlabel ??
-        normalized.description ??
-        ""
-    ).trim();
+    const rawBatch =
+      String(
+        normalized.batch ??
+          normalized.batchlabel ??
+          normalized.description ??
+          ""
+      ).trim();
 
     seen.add(code);
 
@@ -1403,43 +1942,84 @@ function parseStructuredRows(
       code,
       pin,
       value:
-        numericValue && numericValue > 0
+        numericValue &&
+        numericValue > 0
           ? numericValue
           : undefined,
-      currency: /^[A-Z]{3}$/.test(rawCurrency)
-        ? rawCurrency
-        : undefined,
-      batch: rawBatch || undefined,
+      currency:
+        /^[A-Z]{3}$/.test(
+          rawCurrency
+        )
+          ? rawCurrency
+          : undefined,
+      batch:
+        rawBatch ||
+        undefined,
     });
   }
 
   return output;
 }
 
-function parseCsvOrDelimited(input: string): ParsedCard[] {
-  const lines = input.split(/\r?\n/).filter((l) => l.trim());
-
-  if (lines.length < 2) return [];
-
-  const delimiter = lines[0].includes("\t")
-    ? "\t"
-    : lines[0].includes(";")
-    ? ";"
-    : ",";
-
-  const headers = lines[0]
-    .split(delimiter)
-    .map((h) => h.replace(/^["']|["']$/g, "").trim());
-
-  const rows = lines.slice(1).map((line) => {
-    const cells = line
-      .split(delimiter)
-      .map((c) => c.replace(/^["']|["']$/g, "").trim());
-
-    return Object.fromEntries(
-      headers.map((h, i) => [h, cells[i] ?? ""])
+function parseCsvOrDelimited(
+  input: string
+): ParsedCard[] {
+  const lines = input
+    .split(/\r?\n/)
+    .filter((line) =>
+      line.trim()
     );
-  });
 
-  return parseStructuredRows(rows);
+  if (lines.length < 2) {
+    return [];
+  }
+
+  const delimiter =
+    lines[0].includes("\t")
+      ? "\t"
+      : lines[0].includes(";")
+      ? ";"
+      : ",";
+
+  const headers =
+    lines[0]
+      .split(delimiter)
+      .map((header) =>
+        header
+          .replace(
+            /^["']|["']$/g,
+            ""
+          )
+          .trim()
+      );
+
+  const rows =
+    lines
+      .slice(1)
+      .map((line) => {
+        const cells =
+          line
+            .split(delimiter)
+            .map((cell) =>
+              cell
+                .replace(
+                  /^["']|["']$/g,
+                  ""
+                )
+                .trim()
+            );
+
+        return Object.fromEntries(
+          headers.map(
+            (header, index) => [
+              header,
+              cells[index] ?? "",
+            ]
+          )
+        );
+      });
+
+  return parseStructuredRows(
+    rows
+  );
 }
