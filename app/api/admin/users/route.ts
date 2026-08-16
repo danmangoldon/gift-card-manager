@@ -16,17 +16,17 @@ async function requireAdmin() {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") {
+  if (profileError || profile?.role !== "admin") {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 
-  return { user };
+  return { user, supabase };
 }
 
 function validRole(value: unknown): value is Role {
@@ -40,28 +40,36 @@ export async function GET() {
   try {
     const admin = createAdminClient();
 
-    const [{ data: authData, error: authError }, { data: profiles, error: profileError }] =
-      await Promise.all([
-        admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-        admin.from("profiles").select("id, email, role"),
-      ]);
+    const { data: authData, error: authError } =
+      await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
 
     if (authError) throw authError;
-    if (profileError) throw profileError;
+
+    const { data: profiles } = await auth.supabase
+      .from("profiles")
+      .select("id, email, role");
 
     const roleById = new Map(
-      (profiles ?? []).map((profile) => [profile.id, profile.role as Role])
+      (profiles ?? []).map((profile) => [
+        profile.id,
+        profile.role === "admin" ? "admin" : "user",
+      ])
     );
 
-    const users = authData.users.map((user) => ({
-      id: user.id,
-      email: user.email ?? "",
-      role: roleById.get(user.id) ?? "user",
-      emailConfirmedAt: user.email_confirmed_at ?? null,
-      invitedAt: user.invited_at ?? null,
-      lastSignInAt: user.last_sign_in_at ?? null,
-      isCurrentUser: user.id === auth.user.id,
-    }));
+    const users = authData.users.map((user) => {
+      const metadataRole =
+        user.user_metadata?.role === "admin" ? "admin" : "user";
+
+      return {
+        id: user.id,
+        email: user.email ?? "",
+        role: roleById.get(user.id) ?? metadataRole,
+        emailConfirmedAt: user.email_confirmed_at ?? null,
+        invitedAt: user.invited_at ?? null,
+        lastSignInAt: user.last_sign_in_at ?? null,
+        isCurrentUser: user.id === auth.user.id,
+      };
+    });
 
     return NextResponse.json({ users });
   } catch (error) {
@@ -94,22 +102,16 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
       redirectTo,
+      data: { role },
     });
 
     if (error) throw error;
     if (!data.user) throw new Error("Supabase did not return the invited user.");
 
-    const { error: profileError } = await admin
-      .from("profiles")
-      .upsert({
-        id: data.user.id,
-        email,
-        role,
-      });
-
-    if (profileError) throw profileError;
-
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      user: { id: data.user.id, email: data.user.email ?? email, role },
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unable to invite user." },
@@ -138,13 +140,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const admin = createAdminClient();
-    const { error } = await admin
-      .from("profiles")
-      .update({ role })
-      .eq("id", id);
+    const { error: roleError } = await auth.supabase.rpc(
+      "admin_set_user_role",
+      { target_user_id: id, new_role: role }
+    );
 
-    if (error) throw error;
+    if (roleError) throw roleError;
+
+    const admin = createAdminClient();
+    const { error: metadataError } = await admin.auth.admin.updateUserById(id, {
+      user_metadata: { role },
+    });
+
+    if (metadataError) {
+      console.error("Role metadata update failed:", metadataError);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -181,7 +191,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to delete user." },
+      { error: error instanceof Error ? error.message : "Unable to remove user." },
       { status: 500 }
     );
   }
