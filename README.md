@@ -1,167 +1,375 @@
 # Gift Card Manager
 
-Internal web app to track digital gift cards by code, PIN, value and currency.
+Internal web application for managing digital gift cards, tracking availability and usage, checking remaining balances, and maintaining an audit trail.
 
-## What it does
+## Overview
 
-- Login required before any gift card data can be viewed.
-- Add gift cards by pasting `CODE PIN` lines or uploading TXT/CSV.
-- Store a value and 3-letter currency for each batch.
-- Track Available vs Used.
-- Record recipient/vendor, usage date, user and optional notes.
-- Search and filter the inventory.
-- Mask PINs by default.
-- Show remaining value separately per currency.
-- Prevent duplicate card codes at database level.
-- No delete button/policy, reducing accidental permanent loss.
+The Gift Card Manager is designed for internal operational use where gift card codes need to be stored, issued to suppliers or service providers, tracked after use, and reconciled against their remaining balance.
 
-## Recommended architecture
+The application provides two access levels:
 
-GitHub = source code only  
-Vercel = hosts the Next.js application  
-Supabase = authentication + Postgres database + Row Level Security
+- **User**: can view available gift cards, copy voucher details, check balances, and mark cards as used.
+- **Admin**: has full access, including upload, edit, delete, restore, audit log access, and user administration.
 
-Do NOT commit real gift card codes, PINs, passwords or `.env.local` to GitHub.
+## Main Features
 
-## 1. Create Supabase project
+### Gift Card Management
 
-Create a Supabase project.
+- Store gift card code, PIN, value, currency, batch, recipient/vendor and notes
+- Import multiple cards by paste, CSV or Excel
+- Copy code, PIN and value together as one package
+- Mask PINs by default
+- Mark gift cards as used
+- Restore used cards
+- Edit active cards
+- Delete cards
+- Keep CHF, EUR and other currencies separate
 
-In the Supabase SQL Editor, run:
+### Balance Tracking
 
-`supabase/schema.sql`
+The dashboard supports manual balance reconciliation against the official external balance-check service.
 
-Then go to Authentication settings.
+The workflow is:
 
-Recommended:
-- Disable public/self sign-up.
-- Create or invite only approved team accounts.
-- Require strong passwords.
-- Enable MFA if your Supabase plan/configuration supports the policy you want.
+1. Click **Check**
+2. The gift card code is copied automatically
+3. The official balance-check page opens
+4. Complete the external CAPTCHA
+5. Paste the code
+6. Read the returned remaining balance
+7. Return to the Gift Card Manager
+8. Enter and save the remaining balance
 
-## 2. Add environment variables
+The application derives the display status from the latest recorded balance:
 
-Copy:
+- **Available**: remaining balance equals the original value
+- **Partially used**: remaining balance is greater than 0 but lower than the original value
+- **Used**: remaining balance is 0 or the card has been manually marked as used
 
-`.env.example` → `.env.local`
+The dashboard always sorts cards in this order:
 
-Fill in:
+1. Available
+2. Partially used
+3. Used
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+Within each group, the newest cards appear first.
+
+### Dashboard
+
+The dashboard shows:
+
+- Number of available cards
+- Number of partially used cards
+- Number of used cards
+- Total remaining value by currency
+- Search across code, recipient/vendor, batch and notes
+- Status filters
+- Remaining balance
+- Last balance-check timestamp
+- Usage date
+- Administrative actions
+
+### User Management
+
+Admins can manage users from the internal user-management page.
+
+Roles:
+
+#### User
+
+Can:
+
+- View gift cards
+- Copy gift card details
+- View PINs
+- Check balances
+- Mark cards as used
+
+Cannot:
+
+- Upload gift cards
+- Edit cards
+- Delete cards
+- Restore cards
+- Access the audit log
+- Manage users
+
+#### Admin
+
+Can perform all user actions plus:
+
+- Upload gift cards
+- Edit gift cards
+- Delete gift cards
+- Restore cards
+- View the audit log
+- Invite users
+- Change user roles
+- Manage user access
+
+### Audit Log
+
+Administrative and gift card changes are recorded in the database audit log.
+
+The audit log is intended to provide traceability for actions such as:
+
+- Card creation
+- Card updates
+- Marking a card as used
+- Restoring a card
+- Deleting a card
+
+The application does not provide a way to edit or delete audit records.
+
+## Technology Stack
+
+- **Next.js**
+- **React**
+- **TypeScript**
+- **Supabase**
+  - Authentication
+  - PostgreSQL database
+  - Row-level security
+- **Vercel**
+  - Hosting
+  - Automatic deployments from GitHub
+- **Lucide React**
+  - UI icons
+- **SheetJS / XLSX**
+  - Excel import support
+
+## Project Structure
+
+```text
+app/
+├── admin/
+│   ├── audit/
+│   └── users/
+├── api/
+│   └── admin/
+│       └── users/
+├── auth/
+│   └── callback/
+├── forgot-password/
+├── login/
+├── reset-password/
+├── globals.css
+├── layout.tsx
+└── page.tsx
+
+components/
+└── GiftCardDashboard.tsx
+
+lib/
+└── supabase/
+
+public/
+└── on-logo-black.svg
+
+supabase/
+└── SQL migration / setup files
 ```
 
-The publishable key can be present in the browser. Access to the table is controlled by Supabase authentication and Row Level Security. Never use a Supabase service-role key in browser code.
+## Environment Variables
 
-## 3. Run locally
+The application requires Supabase environment variables in Vercel.
+
+Typical variables include:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+Do not commit real production secrets to GitHub.
+
+The `SUPABASE_SERVICE_ROLE_KEY` must only be used server-side.
+
+## Local Development
+
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Run the development server:
+
+```bash
 npm run dev
 ```
 
 Open:
 
-`http://localhost:3000`
-
-## 4. Put it on GitHub
-
-Create a private GitHub repository and push this folder.
-
-Example:
-
-```bash
-git init
-git add .
-git commit -m "Initial gift card manager"
-git branch -M main
-git remote add origin YOUR_GITHUB_REPOSITORY
-git push -u origin main
+```text
+http://localhost:3000
 ```
 
-A private repository is recommended even though the credentials/data are not stored in the code.
+Build for production:
 
-## 5. Deploy with Vercel
+```bash
+npm run build
+```
 
-- Import the GitHub repository into Vercel.
-- Add the same two environment variables in Vercel Project Settings.
-- Deploy.
-- Every push to the configured production branch can then update the app.
+Start the production build locally:
 
-## Input format
+```bash
+npm start
+```
 
-The app accepts the format you normally receive:
+## Deployment
+
+The project is deployed through Vercel.
+
+Recommended workflow:
+
+1. Make changes in GitHub
+2. Commit to `main`
+3. Vercel detects the commit automatically
+4. Wait until the deployment status shows **Ready**
+5. Test using the stable production domain
+
+Avoid using temporary preview deployment URLs for normal login testing.
+
+## Supabase Setup
+
+The application relies on the following Supabase areas:
+
+- Authentication
+- `profiles`
+- `gift_cards`
+- audit tables/functions/triggers
+- role and access policies
+
+Gift card records include fields such as:
+
+```text
+id
+code
+pin
+value
+currency
+status
+batch_label
+recipient
+note
+used_at
+used_by
+created_at
+remaining_balance
+last_balance_check
+```
+
+The exact database schema should be maintained through SQL migration/setup files in the `supabase/` directory.
+
+## Authentication
+
+Authentication is handled by Supabase.
+
+Supported flows include:
+
+- Email/password login
+- User invitations
+- Forgot password
+- Password reset
+- Admin/user role assignment
+
+Production redirect URLs must be configured correctly in Supabase Authentication settings.
+
+## Security Notes
+
+This application contains sensitive voucher credentials.
+
+Important controls:
+
+- Access requires authentication
+- PINs are masked by default
+- Admin functionality is restricted by role
+- Administrative actions are audited
+- Production secrets must never be exposed client-side
+- The Supabase service-role key must never be placed in browser code
+- Voucher data should not be shared outside approved internal workflows
+
+The external balance-check CAPTCHA must not be bypassed or automated.
+
+## Mobile Support
+
+The dashboard is responsive.
+
+On smaller screens:
+
+- The wide desktop table changes into stacked gift card cards
+- Horizontal table scrolling is avoided
+- Actions remain accessible
+- Filters and statistics reflow for smaller displays
+
+## Gift Card Import Format
+
+### Paste
+
+Example:
 
 ```text
 638889001467108225188    2717
 638889001595108225194    2412
-638889001452108225205    2895
-638889001421108225219    5962
 ```
 
-It also tolerates comma or semicolon delimiters, for example:
+### CSV / Excel
+
+Recommended columns:
 
 ```text
-638889001467108225188,2717
-638889001595108225194;2412
+code
+pin
+value
+currency
+batch
 ```
 
-The value and currency are entered once for the entire imported batch.
+Only `code` and `pin` are mandatory when a default value and currency are entered during import.
 
-## Security notes
+## Operational Notes
 
-This application is deliberately not a static GitHub Pages site. Gift card codes and PINs function like monetary instruments and must not be embedded in a public HTML/JavaScript bundle or stored in the Git repository.
+A gift card being marked as used in the application means it has been issued or recorded as used operationally.
 
-The database policies currently allow every authenticated user to read and update all gift cards. That matches a small trusted internal team. If you later need admins vs read-only users, extend the database with roles and stricter Row Level Security policies.
+The balance check is the more reliable method for determining the actual remaining voucher value.
 
-The UI masks PINs, but masking is only a usability/privacy feature. Any authenticated user who is authorized to read the row can technically access the PIN through the application/database API. Only invite people who should be permitted to see the vouchers.
+For this reason, the latest recorded remaining balance should be treated as the operational source of truth for dashboard value reporting.
 
-For corporate production use, have Information Security review the Supabase/Vercel setup, data location, retention, authentication requirements and vendor approval before storing live voucher credentials.
+## Current Limitations
 
+- Balance checking is not fully automated because the official external service requires CAPTCHA verification
+- Remaining balances therefore require a manual confirmation step
+- User invitation emails are subject to Supabase email rate limits unless a custom SMTP provider is configured
+- Temporary Vercel preview URLs may occasionally trigger browser security warnings; use the stable production domain for normal operation
 
-## Roles and audit log
+## Branding
 
-This version includes three roles:
+The application uses the official On logo supplied for this internal project.
 
-- `admin`: full gift-card management access plus the audit log.
-- `manager`: can view, import, mark used and restore gift cards.
-- `viewer`: read-only access.
+Brand assets are stored in:
 
-`dan.mangold@on-running.com` is automatically assigned the `admin` role when the SQL schema is installed. Other newly created users default to `viewer`.
-
-To promote a colleague to manager, run this in the Supabase SQL Editor:
-
-```sql
-update public.profiles
-set role = 'manager'
-where email = 'colleague@on-running.com';
+```text
+public/
 ```
 
-To make somebody read-only again:
+## Maintenance
 
-```sql
-update public.profiles
-set role = 'viewer'
-where email = 'colleague@on-running.com';
-```
+When changing the application:
 
-### Audit log
+1. Update the relevant TypeScript or CSS file
+2. Commit the change to GitHub
+3. Confirm the Vercel production deployment succeeds
+4. Test login
+5. Test role permissions
+6. Test gift card actions
+7. Test audit logging
+8. Test balance checking
+9. Test on mobile
 
-Admins can open `/admin/audit`.
+## Status
 
-The audit log is generated by a PostgreSQL trigger and records:
-- creation of gift cards
-- marking a card as used
-- restoring a card
-- other updates
-- acting user and timestamp
-- before/after record state
+Internal operational tool.
 
-There is deliberately no application policy allowing users to modify or delete audit-log records.
-
-### Important security boundary
-
-The app controls authorization through Supabase Row Level Security, not merely by hiding buttons. A viewer therefore cannot bypass the UI and write directly through the normal authenticated API.
-
-For a corporate deployment, consider SSO/MFA as a later hardening step and complete the relevant InfoSec/vendor review before storing live monetary credentials.
+Not intended for public or customer-facing use.
