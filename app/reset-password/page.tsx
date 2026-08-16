@@ -9,52 +9,58 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [ready, setReady] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
     async function checkSession() {
-      const { data } = await supabase.auth.getSession();
-      if (mounted && data.session) setReady(true);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (!session) {
+        setError(
+          "This password reset link is invalid or has expired. Please request a new one."
+        );
+        return;
+      }
+
+      setReady(true);
     }
 
     checkSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      if (event === "PASSWORD_RECOVERY" || session) setReady(true);
-    });
-
-    const timer = window.setTimeout(() => {
-      if (mounted) setReady((current) => current);
-    }, 1500);
-
     return () => {
       mounted = false;
-      window.clearTimeout(timer);
-      listener.subscription.unsubscribe();
     };
   }, [supabase]);
 
   async function updatePassword(e: React.FormEvent) {
     e.preventDefault();
+    setMessage("");
     setError("");
 
-    if (password.length < 10) {
-      setError("Please use a password with at least 10 characters.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("The passwords do not match.");
+      setError("Passwords do not match.");
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
+
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+
     setLoading(false);
 
     if (error) {
@@ -62,8 +68,15 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    setSuccess(true);
+    setMessage("Password updated successfully. You can now sign in.");
+    setPassword("");
+    setConfirmPassword("");
+
     await supabase.auth.signOut();
+
+    window.setTimeout(() => {
+      window.location.href = "/login";
+    }, 1400);
   }
 
   return (
@@ -71,50 +84,53 @@ export default function ResetPasswordPage() {
       <section className="login-card">
         <div className="brand-mark"><KeyRound size={25} /></div>
         <p className="eyebrow">INTERNAL TOOL</p>
-        <h1>Set new password</h1>
+        <h1>Choose a new password</h1>
+        <p className="muted">
+          Enter your new password below.
+        </p>
 
-        {success ? (
-          <>
-            <p className="muted">Your password has been updated successfully.</p>
-            <a className="primary full" href="/login">Return to sign in</a>
-          </>
-        ) : ready ? (
-          <form onSubmit={updatePassword} className="form-stack">
-            <label>
-              New password
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="At least 10 characters"
-              />
-            </label>
-            <label>
-              Confirm new password
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                placeholder="Repeat password"
-              />
-            </label>
-            {error && <div className="error-box">{error}</div>}
-            <button className="primary full" disabled={loading}>
-              {loading ? "Saving…" : "Save new password"}
+        <form onSubmit={updatePassword} className="form-stack">
+          <label>
+            New password
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={!ready || loading}
+              required
+              placeholder="At least 8 characters"
+            />
+          </label>
+
+          <label>
+            Confirm password
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={!ready || loading}
+              required
+              placeholder="Repeat new password"
+            />
+          </label>
+
+          {message && <div className="notice">{message}</div>}
+          {error && <div className="error-box">{error}</div>}
+
+          <div className="login-actions">
+            <button
+              className="primary full"
+              disabled={!ready || loading}
+            >
+              {loading ? "Updating…" : "Update password"}
             </button>
-          </form>
-        ) : (
-          <>
-            <p className="muted">
-              This recovery link is invalid, expired, or has already been used.
-            </p>
-            <a className="primary full" href="/forgot-password">Request a new link</a>
-          </>
-        )}
+            <a className="login-forgot" href="/login">
+              Back to sign in
+            </a>
+          </div>
+        </form>
       </section>
     </main>
   );
